@@ -24,9 +24,9 @@ const MAX_PENDING_COMPLAINTS = 5;
 
 @injectable()
 export default class EmployeeRepoImpl implements EmployeeRepository {
-   constructor(
-     @inject(TYPES.EmailService) private EmailService : EmailService,     
-    ) {}
+  constructor(
+    @inject(TYPES.EmailService) private EmailService: EmailService,
+  ) { }
   async createEmployee(
     employeeName: string,
     emailId: string,
@@ -36,10 +36,10 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
     currentSalary: number,
     age: number,
     position: 'coordinator' | 'mechanic',
-    fieldOfMechanic ?: string[],
+    fieldOfMechanic?: string[],
     previousJob: string = "",
     experience: number = 0,
-    password ?:string,
+    password?: string,
   ): Promise<Employee | null> {
     try {
       const employee = await EmployeeModel.create({
@@ -55,9 +55,14 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
         experience,
         fieldOfMechanic
       });
-      await this.EmailService.sendEmployeeWelcomeEmail(emailId, employeeName, password);
 
-      
+      // Send welcome email asynchronously without blocking the response
+      this.EmailService.sendEmployeeWelcomeEmail(emailId, employeeName, password)
+        .catch((error) => {
+          console.error("Failed to send employee welcome email:", error);
+          // Don't throw - email failure shouldn't prevent employee creation
+        });
+
       return {
         id: employee._id.toString(),
         employeeName: employee.employeeName,
@@ -72,11 +77,11 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
         experience: employee.experience,
         status: employee.status,
         isDeleted: employee.isDeleted,
-        password: employee.password ,
+        password: employee.password,
         workingStatus: employee.workingStatus,
-        fieldOfMechanic  : employee.fieldOfMechanic
+        fieldOfMechanic: employee.fieldOfMechanic
       };
-    }catch (error: unknown) {
+    } catch (error: unknown) {
       if (
         typeof error === "object" &&
         error !== null &&
@@ -125,10 +130,20 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
 
       const eligibleMechanics = mechanicsWithWorkload
         .filter(m => m.pendingComplaints < MAX_PENDING_COMPLAINTS)
-        .sort((a, b) =>
-          a.pendingComplaints - b.pendingComplaints ||
-          ((b.mechanic.experience ?? 0) - (a.mechanic.experience ?? 0))
-        );
+        .sort((a, b) => {
+          // 1. Sort by pending complaints (lowest first)
+          if (a.pendingComplaints !== b.pendingComplaints) {
+            return a.pendingComplaints - b.pendingComplaints;
+          }
+          // 2. Sort by lastAssignedAt (oldest/null first for fair distribution)
+          const aTime = a.mechanic.lastAssignedAt ? new Date(a.mechanic.lastAssignedAt).getTime() : 0;
+          const bTime = b.mechanic.lastAssignedAt ? new Date(b.mechanic.lastAssignedAt).getTime() : 0;
+          if (aTime !== bTime) {
+            return aTime - bTime;
+          }
+          // 3. Sort by experience (highest first - tie-breaker)
+          return (b.mechanic.experience ?? 0) - (a.mechanic.experience ?? 0);
+        });
 
       if (eligibleMechanics.length > 0) {
         return eligibleMechanics[0].mechanic;
@@ -150,7 +165,7 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
         busyFieldMechanics.map(async (mechanic) => {
           const activeComplaints = await ComplaintModel.find({
             'assignedMechanics.mechanicId': mechanic._id,
-            'status.status': { $ne: 'Resolved' }
+            'status.status': { $ne: 'completed' }
           });
 
           const pendingComplaints = activeComplaints.filter(c =>
@@ -173,11 +188,22 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
       prioritizedBusyMechanic.sort(
         (a, b) => {
           if (!a || !b) return 0;
-          return (
-            a.totalPriority - b.totalPriority ||
-            a.pendingComplaints - b.pendingComplaints ||
-            ((b.mechanic.experience ?? 0) - (a.mechanic.experience ?? 0))
-          );
+          // 1. Sort by total priority score (lowest first)
+          if (a.totalPriority !== b.totalPriority) {
+            return a.totalPriority - b.totalPriority;
+          }
+          // 2. Sort by pending complaints (lowest first)
+          if (a.pendingComplaints !== b.pendingComplaints) {
+            return a.pendingComplaints - b.pendingComplaints;
+          }
+          // 3. Sort by lastAssignedAt (oldest/null first for fair distribution)
+          const aTime = a.mechanic.lastAssignedAt ? new Date(a.mechanic.lastAssignedAt).getTime() : 0;
+          const bTime = b.mechanic.lastAssignedAt ? new Date(b.mechanic.lastAssignedAt).getTime() : 0;
+          if (aTime !== bTime) {
+            return aTime - bTime;
+          }
+          // 4. Sort by experience (highest first - tie-breaker)
+          return ((b.mechanic.experience ?? 0) - (a.mechanic.experience ?? 0));
         }
       );
 
@@ -237,88 +263,88 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
     return result ? this.toDomainEntity(result) : null;
   }
 
- async findCoordinators() {
-  return await EmployeeModel.find(
-    {
-      position: "coordinator",
-      isDeleted: false,
-      status: "active"
-    },
-    { emailId: 1, employeeName: 1, _id: 1 }
-  );
-}
-  
-async findAllMechanics(): Promise<IFindAllCoordinatorAndMechanic[]> {
-  try {
-    const mechanics = await EmployeeModel.find({ 
-      position: 'mechanic',
-      isDeleted: false 
-    });
-    return mechanics.map(this.toDomainEntity);
-  } catch (error) {
-    console.error("Error finding mechanics:", error);
-    throw new ServerError("Failed to retrieve mechanics");
+  async findCoordinators() {
+    return await EmployeeModel.find(
+      {
+        position: "coordinator",
+        isDeleted: false,
+        status: "active"
+      },
+      { emailId: 1, employeeName: 1, _id: 1 }
+    );
   }
-}
 
-async findAllCoordinators(): Promise<IFindAllCoordinatorAndMechanic[]> {
-  try {
-    const coordinators = await EmployeeModel.find({ 
-      position: 'coordinator',
-      isDeleted: false 
-    });
-    return coordinators.map(this.toDomainEntity);
-  } catch (error) {
-    console.error("Error finding coordinators:", error);
-    throw new ServerError("Failed to retrieve coordinators");
-  }
-}
-
-
-async findByEmployeeId(id: string): Promise<IGetEmployeeProfileUsecase | null> {
-  try {
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      return null;
+  async findAllMechanics(): Promise<IFindAllCoordinatorAndMechanic[]> {
+    try {
+      const mechanics = await EmployeeModel.find({
+        position: 'mechanic',
+        isDeleted: false
+      });
+      return mechanics.map(this.toDomainEntity);
+    } catch (error) {
+      console.error("Error finding mechanics:", error);
+      throw new ServerError("Failed to retrieve mechanics");
     }
-    const employee = await EmployeeModel.findById(id);
-    if (!employee) {
-      return null;
-    }
-    return this.toDomainEntity(employee);
-  } catch (error) {
-    console.error("Error finding employee by ID:", error);
-    throw new ServerError("Failed to retrieve employee");
   }
-}
+
+  async findAllCoordinators(): Promise<IFindAllCoordinatorAndMechanic[]> {
+    try {
+      const coordinators = await EmployeeModel.find({
+        position: 'coordinator',
+        isDeleted: false
+      });
+      return coordinators.map(this.toDomainEntity);
+    } catch (error) {
+      console.error("Error finding coordinators:", error);
+      throw new ServerError("Failed to retrieve coordinators");
+    }
+  }
 
 
-private toDomainEntity(employee: any): Employee {
-  return {
-    id: employee._id.toString(),
-    employeeName: employee.employeeName,
-    emailId: employee.emailId,
-    joinDate: new Date(employee.joinDate),
-    contactNumber: employee.contactNumber,
-    address: employee.address,
-    currentSalary: employee.currentSalary,
-    age: employee.age,
-    position: employee.position,
-    previousJob: employee.previousJob,
-    experience: employee.experience,
-    status: employee.status,
-    isDeleted: employee.isDeleted,
-    password: employee.password,
-    workingStatus: employee.workingStatus,
-    fieldOfMechanic: employee.fieldOfMechanic
-  };
-}
+  async findByEmployeeId(id: string): Promise<IGetEmployeeProfileUsecase | null> {
+    try {
+      if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return null;
+      }
+      const employee = await EmployeeModel.findById(id);
+      if (!employee) {
+        return null;
+      }
+      return this.toDomainEntity(employee);
+    } catch (error) {
+      console.error("Error finding employee by ID:", error);
+      throw new ServerError("Failed to retrieve employee");
+    }
+  }
+
+
+  private toDomainEntity(employee: any): Employee {
+    return {
+      id: employee._id.toString(),
+      employeeName: employee.employeeName,
+      emailId: employee.emailId,
+      joinDate: new Date(employee.joinDate),
+      contactNumber: employee.contactNumber,
+      address: employee.address,
+      currentSalary: employee.currentSalary,
+      age: employee.age,
+      position: employee.position,
+      previousJob: employee.previousJob,
+      experience: employee.experience,
+      status: employee.status,
+      isDeleted: employee.isDeleted,
+      password: employee.password,
+      workingStatus: employee.workingStatus,
+      fieldOfMechanic: employee.fieldOfMechanic
+    };
+  }
 
   async findAvailableMechanics(): Promise<IGetAvailableMechanicUsecase[]> {
     const mechanics = await EmployeeModel.find({
       position: 'mechanic',
       $or: [
         { workingStatus: 'Available' },
-        { workingStatus: null } 
+        { workingStatus: null }
       ],
       status: 'active',
       isDeleted: false
@@ -338,8 +364,8 @@ private toDomainEntity(employee: any): Employee {
       status: mech.status,
       isDeleted: mech.isDeleted,
       password: mech.password,
-      workingStatus : mech.workingStatus,
-      fieldOfMechanic  : mech.fieldOfMechanic
+      workingStatus: mech.workingStatus,
+      fieldOfMechanic: mech.fieldOfMechanic
     }));
   }
 
@@ -347,88 +373,88 @@ private toDomainEntity(employee: any): Employee {
   async getAllEmployees(page: number = 1, limit: number = 10): Promise<{ employees: IGetAllEmployeesUseCase[]; total: number }> {
     const skip = (page - 1) * limit;
     const [employees, total] = await Promise.all([
-        EmployeeModel.find({ isDeleted: false })
-            .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 }),
-        EmployeeModel.countDocuments({ isDeleted: false })
+      EmployeeModel.find({ isDeleted: false })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+      EmployeeModel.countDocuments({ isDeleted: false })
     ]);
     return {
-        employees: employees.map(emp => ({
-          id: emp._id.toString(),
-          employeeName: emp.employeeName,
-          emailId: emp.emailId,
-          joinDate: emp.joinDate,
-          contactNumber: emp.contactNumber,
-          address: emp.address,
-          currentSalary: emp.currentSalary,
-          age: emp.age,
-          position: emp.position,
-          previousJob: emp.previousJob ?? null,
-          experience: emp.experience ?? 0,
-          status: emp.status,
-          isDeleted: emp.isDeleted,
-          workingStatus: emp.workingStatus,
-          fieldOfMechanic  : emp.fieldOfMechanic
-        })),
-        total
+      employees: employees.map(emp => ({
+        id: emp._id.toString(),
+        employeeName: emp.employeeName,
+        emailId: emp.emailId,
+        joinDate: emp.joinDate,
+        contactNumber: emp.contactNumber,
+        address: emp.address,
+        currentSalary: emp.currentSalary,
+        age: emp.age,
+        position: emp.position,
+        previousJob: emp.previousJob ?? null,
+        experience: emp.experience ?? 0,
+        status: emp.status,
+        isDeleted: emp.isDeleted,
+        workingStatus: emp.workingStatus,
+        fieldOfMechanic: emp.fieldOfMechanic
+      })),
+      total
     };
-}
+  }
 
-    async updateStatus(employeeId: string, newStatus: "active" | "inactive"): Promise<void> {
-      try {
-        const cleanId = employeeId.replace(/^:/, ''); 
-        const employee = await EmployeeModel.findById(cleanId);
-    
-    
-        if (!employee) {
-          throw new Error('Employee not found');
-        }
-    
-        const updatedEmployee = await EmployeeModel.findByIdAndUpdate(
-          cleanId,
-          { status: newStatus },
-          { new: true }
-        );
-    
-      } catch (error) {
-        console.error('Error updating employee status:', error);
-        throw error;
+  async updateStatus(employeeId: string, newStatus: "active" | "inactive"): Promise<void> {
+    try {
+      const cleanId = employeeId.replace(/^:/, '');
+      const employee = await EmployeeModel.findById(cleanId);
+
+
+      if (!employee) {
+        throw new Error('Employee not found');
       }
+
+      const updatedEmployee = await EmployeeModel.findByIdAndUpdate(
+        cleanId,
+        { status: newStatus },
+        { new: true }
+      );
+
+    } catch (error) {
+      console.error('Error updating employee status:', error);
+      throw error;
+    }
+  }
+
+  async softDeleteEmployee(EmployeeId: string): Promise<any> {
+    const ComplaintSafe = await ComplaintModel.findOne({
+      'assignedMechanics.mechanicId': EmployeeId,
+      workingStatus: 'progress'
+    })
+
+    if (ComplaintSafe) {
+      throw new Error("Cannot delete employee assigned to active complaints");
     }
 
-    async softDeleteEmployee(EmployeeId : string):Promise<any>{ 
-        const ComplaintSafe = await ComplaintModel.findOne({
-          'assignedMechanics.mechanicId': EmployeeId,
-          workingStatus: 'progress'
-        })
+    const client = await EmployeeModel.findByIdAndUpdate(
+      EmployeeId,
+      { isDeleted: true },
+      { new: true }
+    );
+    return client;
+  }
 
-        if(ComplaintSafe){
-          throw new Error("Cannot delete employee assigned to active complaints");
-        }
+  async updateEmployee(employeeId: string, updatedData: Partial<Employee>): Promise<IEditEmployeeUsecase | null> {
+    const cleanId = employeeId.replace(/^:/, '');
+    const ComplaintSafe = await ComplaintModel.findOne({
+      'assignedMechanics.mechanicId': cleanId,
+      workingStatus: 'progress'
+    })
 
-        const client = await EmployeeModel.findByIdAndUpdate(
-             EmployeeId,
-            { isDeleted: true },
-            { new: true }
-          );
-            return client;
+    if (ComplaintSafe) {
+      throw new Error("Cannot delete employee assigned to active complaints");
     }
-  
-    async updateEmployee(employeeId: string, updatedData: Partial<Employee>): Promise<IEditEmployeeUsecase | null> {
-      const cleanId = employeeId.replace(/^:/, ''); 
-       const ComplaintSafe = await ComplaintModel.findOne({
-          'assignedMechanics.mechanicId': cleanId,
-          workingStatus: 'progress'
-        })
 
-        if(ComplaintSafe){
-          throw new Error("Cannot delete employee assigned to active complaints");
-        }
-
-      return await EmployeeModel.findByIdAndUpdate(cleanId, updatedData, { new: true });
-    }
-   async findByEmail(emailId: string): Promise<Employee | null> {
+    return await EmployeeModel.findByIdAndUpdate(cleanId, updatedData, { new: true });
+  }
+  async findByEmail(emailId: string): Promise<Employee | null> {
     const employeeDoc = await EmployeeModel.findOne({ emailId })
     if (!employeeDoc) return null;
     return {
@@ -447,14 +473,14 @@ private toDomainEntity(employee: any): Employee {
       isDeleted: employeeDoc.isDeleted,
       password: employeeDoc.password,
       workingStatus: employeeDoc.workingStatus,
-      fieldOfMechanic  : employeeDoc.fieldOfMechanic
+      fieldOfMechanic: employeeDoc.fieldOfMechanic
     };
   }
 
   async storeOTP(email: string, otp: string) {
     await redisClient.set(`otp:${email}`, otp,);
   }
-  
+
   async verifyOTP(email: string, otp: string) {
     const storedOtp = await redisClient.get(`otp:${email}`);
     if (!storedOtp) throw new Error("OTP expired or not found");
@@ -463,7 +489,7 @@ private toDomainEntity(employee: any): Employee {
 
   async updatePassword(email: string, hashedPassword: string) {
     const res = await EmployeeModel.updateOne(
-      { emailId: email},{  password: hashedPassword }
+      { emailId: email }, { password: hashedPassword }
     );
   }
 
@@ -474,7 +500,7 @@ private toDomainEntity(employee: any): Employee {
     position: string,
     page: number = 1,
     limit: number = 10
-): Promise<{ employees: Employee[]; total: number }> {
+  ): Promise<{ employees: Employee[]; total: number }> {
     const skip = (page - 1) * limit;
     const query: any = { isDeleted: false };
 
@@ -503,7 +529,7 @@ private toDomainEntity(employee: any): Employee {
         .sort({ createdAt: -1 }),
       EmployeeModel.countDocuments(query)
     ]);
-    
+
     const transformedEmployees = employees.map(emp => ({
       id: emp._id.toString(),
       employeeName: emp.employeeName,
@@ -520,8 +546,21 @@ private toDomainEntity(employee: any): Employee {
       isDeleted: emp.isDeleted,
       password: emp.password,
       workingStatus: emp.workingStatus,
-      fieldOfMechanic  : emp.fieldOfMechanic
+      fieldOfMechanic: emp.fieldOfMechanic
     }));
     return { employees: transformedEmployees, total };
- }
+  }
+
+  async updateLastAssignedAt(mechanicId: string): Promise<void> {
+    try {
+      await EmployeeModel.findByIdAndUpdate(
+        mechanicId,
+        { lastAssignedAt: new Date() },
+        { new: true }
+      );
+    } catch (error) {
+      console.error('Error updating lastAssignedAt for mechanic:', mechanicId, error);
+      // Non-critical operation, don't throw
+    }
+  }
 }

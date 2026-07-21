@@ -3,6 +3,7 @@ import { ComplaintModel } from "../db/complaint.model";
 import { EmailService} from "./nodemailer-service";
 import { AdminModel } from "../db/models/Admin/admin.model";
 import Employee from "../db/models/employee.model";
+import EmployeeModel from "../db/models/employee.model";
 import { inject, injectable, unmanaged } from "inversify";
 import { TYPES } from "../../types";
 import GetComplaintByIdUseCase from "../../Application/usecases/common/get-complaint-by-id-usecase";
@@ -43,7 +44,6 @@ export class ComplaintReassignmentScheduler {
 
   private setupEventListeners() {
     this.agenda.on('ready', () => {
-      console.log('✅ Agenda connected to MongoDB');
       this.isReady = true;
       this.defineJobs();
     });
@@ -137,7 +137,7 @@ export class ComplaintReassignmentScheduler {
         );
 
         if (!newMechanic) {
-          await this.scheduleReassignment(complaintId, excludeMechanicId, "in 30 minutes");
+          await this.scheduleReassignment(complaintId, excludeMechanicId, "in 2 hours");
           return;
         }
 
@@ -165,6 +165,13 @@ export class ComplaintReassignmentScheduler {
         if (!updateResult) {
           throw new Error(`Failed to update complaint ${complaintId}`);
         }
+
+        // Update mechanic's lastAssignedAt for fair workload distribution
+        await EmployeeModel.findByIdAndUpdate(
+          newMechanic.id,
+          { lastAssignedAt: new Date() },
+          { new: true }
+        ).catch((err: any) => console.error('Error updating mechanic lastAssignedAt:', err));
 
         const assignedBy = complaint.createdBy.includes("@")
           ? { email: complaint.createdBy }
@@ -217,7 +224,7 @@ export class ComplaintReassignmentScheduler {
 
     if (!newMechanic) {
       console.log(`⚠️ No mechanic found for complaint ${complaintId}. Retrying in 24h`);
-      await this.scheduleUnavailableMechanicCheck(complaintId, "in 24 hours");
+      await this.scheduleUnavailableMechanicCheck(complaintId, "in 2 hours");
       return;
     }
 
@@ -246,10 +253,17 @@ export class ComplaintReassignmentScheduler {
       throw new Error(`Failed to assign mechanic for complaint ${complaintId}`);
     }
 
+    // Update mechanic's lastAssignedAt for fair workload distribution
+    await EmployeeModel.findByIdAndUpdate(
+      newMechanic.id,
+      { lastAssignedAt: new Date() },
+      { new: true }
+    ).catch((err: any) => console.error('Error updating mechanic lastAssignedAt:', err));
+
      console.log(`✅ Assigned mechanic ${newMechanic.employeeName} to complaint ${complaintId}`);
    } catch (err) {
      console.error(`❌ Error in assignWhenMechanicAvailable for complaint ${complaintId}:`, err);
-     await this.scheduleUnavailableMechanicCheck(complaintId, "in 24 hours");
+     await this.scheduleUnavailableMechanicCheck(complaintId, "in 2 hours");
    }
  });
 
@@ -290,7 +304,7 @@ export class ComplaintReassignmentScheduler {
 
   public async scheduleUnavailableMechanicCheck(
   complaintId: string,
-  delay: string = "in 24 hours"
+  delay: string = "in 2 hours"
 ): Promise<Job> {
   console.log("Scheduling unavailable mechanic check for complaint:", complaintId, "after", delay);
   if (!this.isReady) throw new Error("Agenda not initialized");

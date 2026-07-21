@@ -5,7 +5,8 @@ import { fetchEmployees } from '../../api/admin/Employee';
 import { useSelector } from 'react-redux';
 import { selectEmployeeAuthData } from '../../store/selectors';
 import { ChatService } from '../../api/chatService.ts/chatApi';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'; // Import emoji picker
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import ImageModal from '../../components/ImageModal'; // Import emoji picker
 
 interface Coordinator {
   id: number | string;
@@ -84,12 +85,15 @@ const ChatWithCoordinators: React.FC = () => {
   const [socketConnected, setSocketConnected] = useState<boolean>(false);
   const [unreadConversations, setUnreadConversations] = useState<Record<string, number>>({});
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageName, setSelectedImageName] = useState<string>("");
+  const [showImageModal, setShowImageModal] = useState<boolean>(false);
   const socketRef = useRef<Socket | null>(null);
   const { employeeData } = useSelector(selectEmployeeAuthData);
   const userId = employeeData?.id;
   const token = employeeData?.token;
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null); 
 
@@ -245,21 +249,33 @@ useEffect(() => {
           ...prev,
           [conversationId]: (prev[conversationId] || 0) + 1,
         }));
-        setCoordinators((prev) =>
-          prev.map((coord) => {
-            if (coord.employeeId === message.senderId) {
-              return {
-                ...coord,
-                hasNewMessages: true,
-                unreadCount: (coord.unreadCount || 0) + 1,
-                lastMessage: message.text || 'File attachment',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              };
-            }
-            return coord;
-          })
-        );
       }
+
+      // Update coordinators list with new message
+      setCoordinators((prev) =>
+        prev.map((coord) => {
+          const coordConversationId = [userId, coord.employeeId].sort().join('_');
+          if (coordConversationId === conversationId) {
+            return {
+              ...coord,
+              lastMessage: message.text || 'File attachment',
+              time: new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              hasNewMessages: !isCurrentConversation,
+              unreadCount: !isCurrentConversation ? (coord.unreadCount || 0) + 1 : coord.unreadCount,
+            };
+          }
+          return coord;
+        }).sort((a, b) => {
+          // Re-sort by time - most recent first
+          if (!a.time && !b.time) return 0;
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          // Parse time strings to compare them
+          const timeA = new Date(`1970/01/01 ${a.time}`).getTime();
+          const timeB = new Date(`1970/01/01 ${b.time}`).getTime();
+          return timeB - timeA;
+        })
+      );
 
       const formattedMessage = formatMessage({
         ...message,
@@ -511,7 +527,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-xl overflow-hidden h-[calc(100vh-12rem)]">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-xl overflow-hidden h-[calc(107vh-12rem)]">
       <div
         className={`fixed top-4 right-4 z-50 px-3 py-1 rounded-full text-sm font-medium ${
           socketConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -693,14 +709,23 @@ useEffect(() => {
                             <img
                               src={attachment.url}
                               alt={attachment.name}
-                              className="max-w-full rounded-lg"
+                              className="max-w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                setSelectedImage(attachment.url);
+                                setSelectedImageName(attachment.name);
+                                setShowImageModal(true);
+                              }}
                             />
                           ) : (
                             <a
                               href={attachment.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center space-x-2 text-sm text-blue-500 hover:underline"
+                              className={`flex items-center space-x-2 text-sm hover:underline ${
+                                message.senderId === userId
+                                  ? 'text-white'
+                                  : 'text-blue-500'
+                              }`}
                             >
                               <Paperclip size={14} />
                               <span>{attachment.name}</span>
@@ -860,6 +885,17 @@ useEffect(() => {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+
+      <ImageModal
+        isOpen={showImageModal}
+        imageUrl={selectedImage || ""}
+        imageName={selectedImageName}
+        onClose={() => {
+          setShowImageModal(false);
+          setSelectedImage(null);
+          setSelectedImageName("");
+        }}
+      />
     </div>
   );
 };

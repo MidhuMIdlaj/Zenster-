@@ -92,7 +92,7 @@ export default class ComplaintController {
       }
       
       const responseData = {
-        productName: customer.data?.productName || null, 
+        productName: customer.data?.products?.[0]?.productName || null, 
         model: customer.data?.products?.[0]?.model || null,            
         status: customer.data?.status,
         warrantyDate: customer.data?.products?.[0]?.warrantyDate || null,
@@ -394,11 +394,18 @@ rejectComplaint = async (req: Request, res: Response) => {
 
 completeTask = async (req: Request, res: Response) => {
   try {
-    const { taskId, mechanicId, description , paymentStatus, amount , paymentMethod } = req.body;
+    const { taskId, mechanicId, description , paymentStatus, amount , paymentMethod, isUnderWarranty } = req.body;
     const files = req.files as Express.Multer.File[];
-    if (!taskId || !mechanicId || !description || !paymentMethod || !paymentStatus || !amount) {
+    const underWarranty = isUnderWarranty === true || isUnderWarranty === 'true';
+    if (!taskId || !mechanicId || !description) {
        res.status(StatusCode.BAD_REQUEST).json({ 
         error: 'Task ID, mechanic ID, and description are required' 
+      });
+      return
+    }
+    if (!underWarranty && (!paymentMethod || !paymentStatus || amount === undefined || amount === null || Number(amount) <= 0)) {
+       res.status(StatusCode.BAD_REQUEST).json({ 
+        error: 'Payment status, amount, and method are required for non-warranty tasks' 
       });
       return
     }
@@ -413,9 +420,9 @@ completeTask = async (req: Request, res: Response) => {
       mechanicId,
       description,
       photoUrls,
-      paymentStatus,
-      amount, 
-      paymentMethod
+      underWarranty ? 'not_required' : paymentStatus,
+      underWarranty ? 0 : Number(amount), 
+      underWarranty ? 'warranty' : paymentMethod
     );
 
     if (!completedTask) {

@@ -50,6 +50,7 @@ export const validateEmail = (email: string): string | null => {
     
     // Clear time part for comparison
     today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
     
     if (!allowFuture && selectedDate > today) {
       return "Date cannot be in the future";

@@ -5,6 +5,8 @@ import {  Socket } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import { selectEmployeeAuthData } from '../../store/selectors';
 import { NotificationService } from '../../api/NotificationService/NotificationService';
+import { useDispatch } from "react-redux";
+import { clearEmployeeAuth } from "../../store/EmployeeAuthSlice";
 
 interface HeaderProps {
   mechanicName: string;
@@ -28,6 +30,7 @@ const Header: React.FC<HeaderProps> = ({
   const { employeeData } = useSelector(selectEmployeeAuthData);
   const token = employeeData?.token;
   const userId = employeeData?.id;
+  const dispatch = useDispatch();
 
    useEffect(() => {
     setUnreadCount(notificationCount);
@@ -86,6 +89,11 @@ const Header: React.FC<HeaderProps> = ({
   const handleProfileClick = () => {
     navigate('/mechanic/profile');
   };
+
+ const handleLogout = () => {
+  dispatch(clearEmployeeAuth());
+  navigate("/employee/login"); // or your login route
+};
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
@@ -154,20 +162,23 @@ const Header: React.FC<HeaderProps> = ({
               href="/mechanic/tasks"
               className="block py-2 text-base font-medium text-gray-700 hover:bg-gray-100 rounded px-3"
             >
-              Tasks
-            </a>
-            <a
-              href="/mechanic/complaints"
-              className="block py-2 text-base font-medium text-gray-700 hover:bg-gray-100 rounded px-3"
-            >
-              Complaints
+              My Task
             </a>
             <a
               href="/mechanic/chat"
               className="block py-2 text-base font-medium text-gray-700 hover:bg-gray-100 rounded px-3"
             >
-              Chat
+              Chat with coordinator
             </a>
+           <button
+          onClick={() => {
+            handleLogout();
+            setShowMobileMenu(false);
+          }}
+          className="block w-full text-left py-2 text-base font-medium text-gray-700 hover:bg-gray-100 rounded px-3"
+        >
+          Sign Out
+        </button>
           </div>
         </div>
       )}

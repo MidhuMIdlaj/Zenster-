@@ -59,6 +59,40 @@ const MechanicLayout = () => {
     }
   }, [mechanicId, token]);
 
+  const upsertNotification = (incoming: any) => {
+    const newNotification: Notification = {
+      _id: incoming?._id || incoming?.notificationId || `message-${Date.now()}`,
+      title: incoming?.title || 'New Message',
+      message: incoming?.message || 'You have a new message',
+      createdAt: incoming?.createdAt || new Date().toISOString(),
+      read: incoming?.read ?? false,
+      type: incoming?.type || 'chat',
+      senderId: incoming?.senderId,
+      senderName: incoming?.senderName || 'Coordinator',
+      senderRole: incoming?.senderRole || 'coordinator',
+      conversationId: incoming?.conversationId,
+    };
+
+    let shouldIncrement = false;
+    setNotifications((prev) => {
+      const duplicateById = prev.some((n) => n._id === newNotification._id);
+      const duplicateKey = `${newNotification.conversationId}-${newNotification.senderId}-${newNotification.message}-${new Date(newNotification.createdAt).getTime()}`;
+      const isDuplicate = duplicateById || prev.some((n) =>
+        `${n.conversationId}-${n.senderId}-${n.message}-${new Date(n.createdAt).getTime()}` === duplicateKey
+      );
+      if (isDuplicate) return prev;
+      shouldIncrement = true;
+      return [newNotification, ...prev];
+    });
+
+    if (shouldIncrement) {
+      setUnreadCount((prev) => prev + 1);
+      setGlobalUnreadCount((prev) => prev + 1);
+      localStorage.setItem('mechanicUnreadCount', `${Number(localStorage.getItem('mechanicUnreadCount') || 0) + 1}`);
+    }
+    return newNotification;
+  };
+
   useEffect(() => {
     if (!userId || !token) return;
 
@@ -120,26 +154,8 @@ const MechanicLayout = () => {
     });
 
     newSocket.on('new_message', (data: Notification) => {
-      if (data.senderRole !== 'coordinator' || location.pathname === '/mechanic/chat') return;
-      const newNotification: Notification = {
-        _id: data._id || `message-${Date.now()}`,
-        title: data.title || 'New Message',
-        message: data.message || 'You have a new message',
-        createdAt: data.createdAt || new Date().toISOString(),
-        read: false,
-        type: 'chat',
-        senderId: data.senderId,
-        senderName: data.senderName,
-        senderRole: data.senderRole,
-        conversationId: data.conversationId,
-      };
-      setNotifications((prev) => {
-        if (prev.some((n) => n._id === newNotification._id)) return prev;
-        return [newNotification, ...prev];
-      });
-      setUnreadCount((prev) => prev + 1);
-      setGlobalUnreadCount((prev) => prev + 1);
-      localStorage.setItem('mechanicUnreadCount', (globalUnreadCount + 1).toString());
+      if (data.senderRole && data.senderRole !== 'coordinator' && data.senderRole !== 'admin') return;
+      const newNotification = upsertNotification(data);
       const toastId = `message_${newNotification._id}`;
       if (!toast.isActive(toastId)) {
         toast.info(
@@ -173,10 +189,14 @@ const MechanicLayout = () => {
       }
     });
 
+    newSocket.on('new_chat_notification', (data: Notification) => {
+      upsertNotification(data);
+    });
+
     newSocket.on('chat_notifications_read', () => {
       setUnreadCount((prev) => Math.max(0, prev - 1));
       setGlobalUnreadCount((prev) => Math.max(0, prev - 1));
-      localStorage.setItem('mechanicUnreadCount', Math.max(0, globalUnreadCount - 1).toString());
+      localStorage.setItem('mechanicUnreadCount', `${Math.max(0, Number(localStorage.getItem('mechanicUnreadCount') || 0) - 1)}`);
       fetchNotifications();
     });
 
@@ -191,6 +211,7 @@ const MechanicLayout = () => {
     return () => {
       newSocket.off('new_complaint_assigned');
       newSocket.off('new_message');
+      newSocket.off('new_chat_notification');
       newSocket.off('chat_notifications_read');
       newSocket.off('all_chat_notifications_read');
       newSocket.disconnect();

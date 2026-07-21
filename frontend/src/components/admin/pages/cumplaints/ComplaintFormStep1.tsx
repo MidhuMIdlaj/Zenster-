@@ -1,21 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, ChevronDown } from 'lucide-react';
-import { Mechanic } from '../../../../types/complaint';
+import { ComplaintFormData, Mechanic } from '../../../../types/complaint';
 
 
 
 interface ComplaintFormStep1Props {
-  formData: {
-    customerEmail: string;
-    contactNumber: string;
-    description: string;
-    assignedMechanicId: string;
-    createdBy: string;
-    priority: string;
-    createByEmail?: string;
-    createdByEmail?: string; 
-  };
+  formData: ComplaintFormData;
   mechanics: Mechanic[];
   coordinators?: { email: string; name?: string }[]; 
   customerEmails?: { email: string; name?: string }[];
@@ -48,6 +39,8 @@ const ComplaintFormStep1: React.FC<ComplaintFormStep1Props> = ({
   const customerEmailDropdownRef = useRef<HTMLDivElement>(null);
   const [contactNumberError, setContactNumberError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   
 
   const filteredCustomerEmails = formData.customerEmail.trim() === '' 
@@ -58,6 +51,7 @@ const ComplaintFormStep1: React.FC<ComplaintFormStep1Props> = ({
       );
 
   const handleCustomerEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTouched(prev => ({ ...prev, customerEmail: true }));
     handleInputChange(e);
     setShowCustomerEmailDropdown(true);
   };
@@ -70,8 +64,24 @@ const ComplaintFormStep1: React.FC<ComplaintFormStep1Props> = ({
       }
     } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(event);
+    setTouched(prev => ({ ...prev, customerEmail: true }));
     setShowCustomerEmailDropdown(false);
   }
+
+  const handleValidatedInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setTouched(prev => ({ ...prev, [e.target.name]: true }));
+    handleInputChange(e);
+  };
+
+  const handleActionClick = () => {
+    setSubmitAttempted(true);
+    if (isEditMode) {
+      return;
+    }
+    handleNextStep?.();
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,9 +99,10 @@ const ComplaintFormStep1: React.FC<ComplaintFormStep1Props> = ({
   }, []);
 
 useEffect(() => {
-  if (formData.contactNumber === "") {
+  const contactNumber = formData.contactNumber ?? "";
+  if (contactNumber === "") {
     setContactNumberError("Contact number is required.");
-  } else if (!/^\d{10}$/.test(formData.contactNumber)) {
+  } else if (!/^\d{10}$/.test(contactNumber)) {
     setContactNumberError("Contact number must be exactly 10 digits and numeric.");
   } else {
     setContactNumberError("");
@@ -189,14 +200,14 @@ useEffect(() => {
             type="text"
             id="contactNumber"
             name="contactNumber"
-            value={formData.contactNumber}
-            onChange={handleInputChange}
+            value={formData.contactNumber ?? ""}
+            onChange={handleValidatedInputChange}
             required
             maxLength={10}
             placeholder="Phone number"
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           />
-          {contactNumberError && (
+          {(touched.contactNumber || submitAttempted) && contactNumberError && (
           <span className="text-xs text-red-600">{contactNumberError}</span>
           )}
         </div>
@@ -211,13 +222,13 @@ useEffect(() => {
             id="description"
             name="description"
             value={formData.description}
-            onChange={handleInputChange}
+            onChange={handleValidatedInputChange}
             required
             rows={4}
             placeholder="Describe the complaint..."
             className={`w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${descriptionError ? "border-red-400" : "border-gray-300"}`}
           ></textarea>
-          {descriptionError && (
+          {(touched.description || submitAttempted) && descriptionError && (
             <span className="text-xs text-red-600">{descriptionError}</span>
           )}
         </div>
@@ -267,7 +278,7 @@ useEffect(() => {
         
         <motion.button
           type={isEditMode ? "submit" : "button"}
-          onClick={isEditMode ? undefined : handleNextStep}
+          onClick={handleActionClick}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           disabled={isSubmitting}

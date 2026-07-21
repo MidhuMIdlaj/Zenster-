@@ -279,13 +279,8 @@ const MechanicSidebar: React.FC<MechanicSidebarProps> = ({
               onClick={() => handleNavigation("/mechanic/chat")}
               className={`w-full flex items-center px-4 py-3 rounded-lg transition-all touch-manipulation min-h-[44px] ${isActive('chat')}`}
             >
-              <div className="relative mr-3 flex-shrink-0">
+              <div className="mr-3 flex-shrink-0">
                 <MessageSquare size={20} />
-                {unreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-xs font-medium">
-                    {unreadMessages > 9 ? '9+' : unreadMessages}
-                  </span>
-                )}
               </div>
               <span className="font-medium truncate">Chat with coordinator</span>
             </button>

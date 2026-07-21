@@ -1,15 +1,15 @@
 import { IVideoCallHistoryRepository } from '../../domain/Repository/i-videocall-history-repository';
-import  VideoCallHistoryModel, {IVideoCallHistory, VideoCallHistoryInput, VideoCallParticipant }  from '../db/models/videocall.history.model';
+import VideoCallHistoryModel, { IVideoCallHistory, VideoCallHistoryInput, VideoCallParticipant } from '../db/models/videocall.history.model';
 
 export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
 
- async create(callRecord: VideoCallHistoryInput): Promise<IVideoCallHistory> {
+  async create(callRecord: VideoCallHistoryInput): Promise<IVideoCallHistory> {
     try {
       const existingRecord = await VideoCallHistoryModel.findOne({ roomId: callRecord.roomId });
       if (existingRecord) {
         throw new Error('A call with this room ID already exists');
       }
-      
+
       const newRecord = new VideoCallHistoryModel(callRecord);
       const savedRecord = await newRecord.save();
       return savedRecord;
@@ -26,18 +26,18 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
   }
 
   async updateParticipants(roomId: string, participants: VideoCallParticipant[]): Promise<IVideoCallHistory> {
-  const updated = await VideoCallHistoryModel.findOneAndUpdate(
-    { roomId },
-    { $set: { participants } },
-    { new: true }
-  );
+    const updated = await VideoCallHistoryModel.findOneAndUpdate(
+      { roomId },
+      { $set: { participants } },
+      { new: true }
+    );
 
-  if (!updated) {
-    throw new Error('Call record not found');
+    if (!updated) {
+      throw new Error('Call record not found');
+    }
+
+    return updated;
   }
-
-  return updated;
-}
 
   async update(roomId: string, callRecord: IVideoCallHistory): Promise<IVideoCallHistory> {
     try {
@@ -62,19 +62,19 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
   }
 
   async endCall(roomId: string): Promise<IVideoCallHistory> {
-  const call = await VideoCallHistoryModel.findOne({ roomId });
-  if (!call) throw new Error('Call not found');
-  if (call.status === 'ended') return call;
+    const call = await VideoCallHistoryModel.findOne({ roomId });
+    if (!call) throw new Error('Call not found');
+    if (call.status === 'ended') return call;
 
-  const endedAt = new Date();
-  const startedAt = call.startedAt || new Date();
+    const endedAt = new Date();
+    const startedAt = call.startedAt || new Date();
 
-  call.endedAt = endedAt;
-  call.status = 'ended';
-  call.duration = Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000);
+    call.endedAt = endedAt;
+    call.status = 'ended';
+    call.duration = Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000);
 
-  return await call.save();
-}
+    return await call.save();
+  }
 
   async findByRoomId(roomId: string): Promise<IVideoCallHistory | null> {
     try {

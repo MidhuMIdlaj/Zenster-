@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Briefcase,  Search, Filter, Check, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
@@ -66,42 +66,53 @@ const EmployeeTable: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const MIN_SEARCH_CHARS = 5;
+  const hasInitialized = useRef(false);
+  const isFirstRun = useRef(true);
 
   // Data fetching
-  const fetchEmployees = useCallback(async (page: number = currentPage) => {
-  setIsLoading(true);
-  setIsRefreshing(true);
-  try {
-    const response = await fetchEmployeesApi(page, itemsPerPage);
-    const data = response.data; 
-    setEmployees(data.employees || []);
-    setTotalItems(data.pagination?.total || 0);
-    setTotalPages(data.pagination?.totalPages || 1);
-  } catch (error) {
-    console.error("Failed to fetch employees:", error);
-    toast.error("Failed to load employees");
-  } finally {
-    setIsLoading(false);
-    setIsRefreshing(false);
-  }
-}, [currentPage, itemsPerPage]);
+  const fetchEmployees = useCallback(async (page: number) => {
+    setIsLoading(true);
+    setIsRefreshing(true);
+    try {
+      const response = await fetchEmployeesApi(page, itemsPerPage);
+      // Check if response has .data structure or direct structure
+      const employees = response.data?.employees || response.employees || [];
+      const total = response.data?.pagination?.total || response.total || 0;
+      const totalPages = response.data?.pagination?.totalPages || response.totalPages || 1;
+      
+      setEmployees(employees);
+      setTotalItems(total);
+      setTotalPages(totalPages);
+    } catch (error) {
+      console.error("Failed to fetch employees:", error);
+      toast.error("Failed to load employees");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [itemsPerPage]);
 
-  const searchEmployees = useCallback(async () => {
+  const searchEmployees = useCallback(async (searchTerm: string, statusF: "all" | "active" | "inactive", positionF: "all" | "coordinator" | "mechanic", page: number) => {
     try {
       setIsRefreshing(true);
       setIsLoading(true);
       const response = await searchEmployeesApi(
-        debouncedSearchTerm, 
-        statusFilter, 
-        positionFilter,
-        currentPage, 
+        searchTerm, 
+        statusF, 
+        positionF,
+        page, 
         itemsPerPage
       );
-      setEmployees(response.employees);
-      setTotalItems(response.total);
-      setTotalPages(response.totalPages);
+      // Check if response has nested structure
+      const employees = response.data?.employees || response.employees || [];
+      const total = response.data?.total || response.total || 0;
+      const totalPages = response.data?.totalPages || response.totalPages || 1;
       
-      if (!response.success && response.employees.length === 0) {
+      setEmployees(employees);
+      setTotalItems(total);
+      setTotalPages(totalPages);
+      
+      if (!response.success && employees.length === 0) {
         toast.warning("Search returned no results");
       }
     } catch (error) {
@@ -114,7 +125,8 @@ const EmployeeTable: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [debouncedSearchTerm, statusFilter, positionFilter, currentPage, itemsPerPage]);
+  }, [itemsPerPage]);
+  
   
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -126,16 +138,43 @@ const EmployeeTable: React.FC = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchTerm]);
 
+  // Initialize on mount
   useEffect(() => {
-    if (debouncedSearchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all' || positionFilter !== 'all') {
-      searchEmployees();
-    } else if (debouncedSearchTerm === '' && statusFilter === 'all' && positionFilter === 'all') {
-      fetchEmployees(currentPage);
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchEmployees(1);
     }
-  }, [debouncedSearchTerm, statusFilter, positionFilter, currentPage, searchEmployees, fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle search/filter changes
+  useEffect(() => {
+    // Don't run until init is complete
+    if (!hasInitialized.current) {
+      return;
+    }
+
+    // Skip the first run after init completes - only run on actual changes
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+
+    // Now only run when user actually changes search/filter after init
+    if (debouncedSearchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all' || positionFilter !== 'all') {
+      searchEmployees(debouncedSearchTerm, statusFilter, positionFilter, 1);
+    } else if (debouncedSearchTerm === '' && statusFilter === 'all' && positionFilter === 'all') {
+      fetchEmployees(1);
+    }
+  }, [debouncedSearchTerm, statusFilter, positionFilter]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    if (debouncedSearchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all' || positionFilter !== 'all') {
+      searchEmployees(debouncedSearchTerm, statusFilter, positionFilter, page);
+    } else {
+      fetchEmployees(page);
+    }
   };
 
   // Form handling
@@ -659,4 +698,4 @@ const handleInputChange = (
   );
 };
 
-export default EmployeeTable;
+export default React.memo(EmployeeTable);

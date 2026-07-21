@@ -16,6 +16,7 @@ import { useSelector } from "react-redux";
 import { selectAdminAuthData } from "../../../store/selectors";
 import { ChatService } from "../../../api/chatService.ts/chatApi";
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import ImageModal from "../../ImageModal";
 
 interface Coordinator {
   id: string;
@@ -91,6 +92,9 @@ const AdminCoordinatorChat: React.FC = () => {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [socketConnected, setSocketConnected] = useState<boolean>(false);
   const [unreadConversations, setUnreadConversations] = useState<Record<string, number>>({});
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageName, setSelectedImageName] = useState<string>("");
+  const [showImageModal, setShowImageModal] = useState<boolean>(false);
 
   const socketRef = useRef<Socket | null>(null);
   const { adminData } = useSelector(selectAdminAuthData);
@@ -156,6 +160,25 @@ const AdminCoordinatorChat: React.FC = () => {
       }
 
       const formattedMessage = formatMessage(message);
+
+      // Update coordinators list with new message
+      setCoordinators(prev => prev.map(coord => {
+        const coordConversationId = [userId, coord.employeeId].sort().join('_');
+        if (coordConversationId === conversationId) {
+          return {
+            ...coord,
+            lastMessage: message.text || 'File attachment',
+            time: new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+        }
+        return coord;
+      }).sort((a, b) => {
+        // Re-sort by time - most recent first
+        if (!a.time && !b.time) return 0;
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return new Date(b.time).getTime() - new Date(a.time).getTime();
+      }));
 
       // If it's our own message, update the optimistic one, otherwise add new message
       if (message.senderId === userId) {
@@ -699,20 +722,29 @@ setCoordinators(coordinatorsWithMessages);
                               <img
                                 src={attachment.url}
                                 alt={attachment.name}
-                                className="max-w-full rounded-lg"
+                                className="max-w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {
+                                  setSelectedImage(attachment.url);
+                                  setSelectedImageName(attachment.name);
+                                  setShowImageModal(true);
+                                }}
                               />
                             ) : (
                               <a
                                 href={attachment.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center space-x-2 text-sm text-blue-500 hover:underline"
-                              >
-                                <Paperclip size={14} />
-                                <span>{attachment.name}</span>
-                                <span>({Math.round(attachment.size / 1024)} KB)</span>
-                              </a>
-                            )}
+                                  className={`flex items-center space-x-2 text-sm hover:underline ${
+                                    message.senderId === userId
+                                      ? 'text-white'
+                                      : 'text-blue-500'
+                                  }`}
+                                >
+                                  <Paperclip size={14} />
+                                  <span>{attachment.name}</span>
+                                  <span>({Math.round(attachment.size / 1024)} KB)</span>
+                                </a>
+                              )}
                           </div>
                         ))}
                       </div>
@@ -876,6 +908,17 @@ setCoordinators(coordinatorsWithMessages);
           </div>
         </div>
       )}
+
+      <ImageModal
+        isOpen={showImageModal}
+        imageUrl={selectedImage || ""}
+        imageName={selectedImageName}
+        onClose={() => {
+          setShowImageModal(false);
+          setSelectedImage(null);
+          setSelectedImageName("");
+        }}
+      />
     </div>
   );
 };

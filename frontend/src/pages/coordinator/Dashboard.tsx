@@ -61,7 +61,8 @@ export default function Dashboard() {
   const [complaintChartData, setComplaintChartData] = useState<ComplaintChartItem[]>([]);
   type PieChartDataItem = { name: string; value: number; color: string };
   const [pieChartData, setPieChartData] = useState<PieChartDataItem[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<Date |null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
   const [allComplaints, setAllComplaints] = useState<any[]>([]);
   const [filteredComplaints, setFilteredComplaints] = useState<any[]>([]);
@@ -136,7 +137,10 @@ export default function Dashboard() {
     if (allComplaints.length > 0) {
       applyFilters();
     }
-  }, [selectedDate, selectedMonth, allComplaints]);
+  }, [ startDate,
+  endDate,
+  selectedMonth,
+  allComplaints]);
 
   const fetchComplaints = async () => {
     try {
@@ -152,31 +156,31 @@ export default function Dashboard() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...allComplaints];
+ const applyFilters = () => {
+  let filtered = [...allComplaints];
 
-    if (selectedMonth) {
-      filtered = filtered.filter(complaint => {
-        const complaintMonth = new Date(complaint.createdAt).getMonth();
-        return complaintMonth === selectedMonth.getMonth();
-      });
-    }
+  if (selectedMonth) {
+    filtered = filtered.filter((complaint) => {
+      const date = new Date(complaint.createdAt);
 
-    if (selectedDate) {
-      filtered = filtered.filter(complaint => {
-        const complaintDate = new Date(complaint.createdAt);
-        return (
-          complaintDate.getDate() === selectedDate.getDate() &&
-          complaintDate.getMonth() === selectedDate.getMonth() &&
-          complaintDate.getFullYear() === selectedDate.getFullYear()
-        );
-      });
-    }
+      return (
+        date.getMonth() === selectedMonth.getMonth() &&
+        date.getFullYear() === selectedMonth.getFullYear()
+      );
+    });
+  }
 
-    setFilteredComplaints(filtered);
-    updateChartData(filtered);
-  };
+  if (startDate && endDate) {
+    filtered = filtered.filter((complaint) => {
+      const date = new Date(complaint.createdAt);
+      return date >= startDate && date <= endDate;
+    });
+  }
 
+  setFilteredComplaints(filtered);
+  updateChartData(filtered);
+  setTopComplainers(calculateTopComplainers(filtered));
+};
   const fetchUserStats = async () => {
     try {
       const res = await ClientListApi();
@@ -256,20 +260,19 @@ export default function Dashboard() {
     return result as ComplaintChartItem[];
   };
 
-  const handleMonthChange = (date: Date | null) => {
-    setSelectedMonth(date);
-    setSelectedDate(null); // Clear date filter when month is selected
-  };
+ const handleMonthChange = (date: Date | null) => {
+  setSelectedMonth(date);
+  setStartDate(null);
+  setEndDate(null);
+};
 
-  const handleDateChange = (date: Date | null) => {
-    setSelectedDate(date);
-    setSelectedMonth(null); // Clear month filter when date is selected
-  };
+ 
 
-  const clearFilters = () => {
-    setSelectedDate(null);
+const clearFilters = () => {
+    setStartDate(null);
+    setEndDate(null);
     setSelectedMonth(null);
-  };
+};
 
   const stats = [
     {
@@ -311,25 +314,38 @@ export default function Dashboard() {
             <Calendar className="text-gray-500" />
             <DatePicker
               selected={selectedMonth}
-              onChange={handleMonthChange}
-              selectsStart
+              onChange={(date)=>{
+                  setSelectedMonth(date);
+                  setStartDate(null);
+                  setEndDate(null);
+              }}
               showMonthYearPicker
+              maxDate={new Date()}
               dateFormat="MMMM yyyy"
               placeholderText="Filter by month"
-              className="border rounded-md px-3 py-2 text-sm w-full"
-            />
+          />
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="text-gray-500" />
             <DatePicker
-              selected={selectedDate}
-              onChange={handleDateChange}
+              selectsRange
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(dates)=>{
+                  const [start,end]=dates;
+
+                  setStartDate(start);
+                  setEndDate(end);
+
+                  setSelectedMonth(null);
+              }}
+              maxDate={new Date()}
+              isClearable
               dateFormat="MMMM d, yyyy"
-              placeholderText="Filter by date"
-              className="border rounded-md px-3 py-2 text-sm w-full"
-            />
+              placeholderText="Select date range"
+          />
           </div>
-          {(selectedDate || selectedMonth) && (
+          {(startDate || endDate || selectedMonth) && (
             <button
               onClick={clearFilters}
               className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-md text-sm"
@@ -349,12 +365,12 @@ export default function Dashboard() {
             topComplainers={topComplainers}
             complaintTrends={complaintChartData}
             selectedPeriod={
-              selectedDate
-                ? format(selectedDate, 'MMMM d, yyyy')
+            startDate && endDate
+                ? `${format(startDate,'MMM d, yyyy')} - ${format(endDate,'MMM d, yyyy')}`
                 : selectedMonth
-                  ? format(selectedMonth, 'MMMM yyyy')
-                  : 'All Time'
-            }
+                ? format(selectedMonth,'MMMM yyyy')
+                : 'All Time'
+        }
           />
         </div>
       </div>

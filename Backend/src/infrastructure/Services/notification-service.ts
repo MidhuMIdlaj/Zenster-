@@ -263,7 +263,8 @@ export class NotificationRepository implements INotificationRepository {
     senderName: string,
     messageText: string,
     conversationId: string,
-    recipientRole: string 
+    recipientRole: string,
+    senderRole: string
   ) {
  
     try {
@@ -275,7 +276,7 @@ export class NotificationRepository implements INotificationRepository {
       const notification = new NotificationModel({
         recipientId,
         recipientType: recipientRole,
-        title: `New message arrived `,
+        title: `New message from ${senderName}`,
         message: truncatedMessage,
         type: 'chat_message',
         relatedId: conversationId,
@@ -284,6 +285,7 @@ export class NotificationRepository implements INotificationRepository {
         data: {
           senderId,
           senderName,
+          senderRole,
           conversationId,
           messagePreview: truncatedMessage
         }
@@ -302,6 +304,7 @@ export class NotificationRepository implements INotificationRepository {
           
           senderId: savedNotification.createdBy,
           senderName,
+          senderRole,
           conversationId
         };
 
@@ -319,6 +322,7 @@ export class NotificationRepository implements INotificationRepository {
    async getUnreadChatNotifications(userId: string, role: string) {
   try {
     const notifications = await NotificationModel.find({
+      recipientId: userId,
       recipientType: role,
       type: 'chat_message',
       read: false
@@ -342,7 +346,6 @@ export class NotificationRepository implements INotificationRepository {
     const result = await NotificationModel.updateMany(
       {
         recipientId: userId,
-        type: 'chat_message',
         read: false
       },
       { read: true }

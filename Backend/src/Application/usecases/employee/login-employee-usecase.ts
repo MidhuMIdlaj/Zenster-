@@ -24,7 +24,11 @@ export default class LoginEmployeeUseCase implements ILoginEmployeeUseCase {
 
     const isMatch = await bcrypt.compare(password, employee.password);
     if (!isMatch) throw new Error("Invalid credentials");
-    const token = jwt.sign({ email }, process.env.JWT_SECRET!, { expiresIn: "5m" });
+    const token = jwt.sign(
+      { userId: employee.id, role: employee.position, email: employee.emailId || employee.employeeName },
+      process.env.JWT_SECRET!,
+      { expiresIn: '24h' }
+    );
     return{
       position: employee.position,
       token: token,

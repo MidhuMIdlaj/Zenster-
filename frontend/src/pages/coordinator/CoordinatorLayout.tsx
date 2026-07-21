@@ -28,10 +28,13 @@ interface Notification {
 
 const CoordinatorLayout = () => {
   const { employeeData } = useSelector(selectEmployeeAuthData);
-  const userName = employeeData?.employeeName || 'Coordinator';
-  const userRole = employeeData?.position || 'Coordinator';
-  const userId = employeeData?.id;
-  const token = employeeData?.token;
+  const storedEmployeeData = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem('employeeData') || '{}')
+    : null;
+  const userName = employeeData?.employeeName || storedEmployeeData?.employeeName || 'Coordinator';
+  const userRole = employeeData?.position || storedEmployeeData?.position || 'Coordinator';
+  const userId = employeeData?.id || storedEmployeeData?.id;
+  const token = employeeData?.token || storedEmployeeData?.token;
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -54,7 +57,7 @@ const CoordinatorLayout = () => {
   });
 
   const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     return (...args: Parameters<T>): Promise<ReturnType<T>> => {
       clearTimeout(timeout);
       return new Promise((resolve) => {
@@ -124,6 +127,44 @@ const CoordinatorLayout = () => {
     }, 500),
     [userId, userRole]
   );
+
+  const upsertNotification = (incoming: any) => {
+    const normalizedNotification = {
+      _id: incoming?._id || incoming?.notificationId || `temp-${Date.now()}`,
+      title: incoming?.title || 'New Message',
+      message: incoming?.message || 'You have a new message',
+      createdAt: incoming?.createdAt || new Date().toISOString(),
+      read: incoming?.read ?? false,
+      type: incoming?.type || 'chat',
+      senderId: incoming?.senderId,
+      senderName: incoming?.senderName || 'Admin',
+      senderRole: incoming?.senderRole || 'admin',
+      conversationId: incoming?.conversationId,
+    } as Notification;
+
+    let shouldIncrement = false;
+    setNotifications(prev => {
+      const duplicateById = prev.some(n => n._id === normalizedNotification._id);
+      const duplicateKey = `${normalizedNotification.conversationId}-${normalizedNotification.senderId}-${normalizedNotification.message}-${new Date(normalizedNotification.createdAt).getTime()}`;
+      const isDuplicate = duplicateById || prev.some(n =>
+        `${n.conversationId}-${n.senderId}-${n.message}-${new Date(n.createdAt).getTime()}` === duplicateKey
+      );
+
+      if (isDuplicate) return prev;
+      shouldIncrement = true;
+      return [normalizedNotification, ...prev];
+    });
+
+    if (shouldIncrement) {
+      setUnreadCount(prev => {
+        const newCount = prev + 1;
+        localStorage.setItem('coordinatorUnreadChat', newCount.toString());
+        return newCount;
+      });
+    }
+
+    return normalizedNotification;
+  };
 
   const handleMarkAsRead = async (notificationId: string, conversationId?: string) => {
     try {
@@ -203,42 +244,11 @@ const CoordinatorLayout = () => {
     });
 
     newSocket.on('new_message', (notification: Notification) => {
-      if (notification.senderRole !== 'admin' || location.pathname === '/employee-chat') {
+      if (notification.senderRole && notification.senderRole !== 'admin' && notification.senderRole !== 'mechanic') {
         return;
       }
 
-      const normalizedNotification = {
-        _id: notification._id || `temp-${Date.now()}`,
-        title: 'New Message',
-        message: notification.message || 'You have a new message',
-        createdAt: notification.createdAt || new Date().toISOString(),
-        read: false,
-        type: 'chat',
-        senderId: notification.senderId,
-        senderName: notification.senderName || 'Admin',
-        senderRole: notification.senderRole || 'admin',
-        conversationId: notification.conversationId,
-      };
-
-      setNotifications(prev => {
-        const duplicateKey = `${normalizedNotification.conversationId}-${normalizedNotification.senderId}-${normalizedNotification.message}-${new Date(normalizedNotification.createdAt).getTime()}`;
-
-        const isDuplicate = prev.some(n =>
-          `${n.conversationId}-${n.senderId}-${n.message}-${new Date(n.createdAt).getTime()}` === duplicateKey
-        );
-
-        if (isDuplicate) {
-          return prev;
-        }
-
-        return [normalizedNotification, ...prev];
-      });
-
-      setUnreadCount(prev => {
-        const newCount = prev + 1;
-        localStorage.setItem('coordinatorUnreadChat', newCount.toString());
-        return newCount;
-      });
+      const normalizedNotification = upsertNotification(notification);
 
       const now = Date.now();
       if (now - lastNotificationTime > 3000) {
@@ -289,6 +299,10 @@ const CoordinatorLayout = () => {
       }
     });
 
+    newSocket.on('new_chat_notification', (notification: Notification) => {
+      upsertNotification(notification);
+    });
+
     newSocket.on('chat_notifications_read', () => {
       setUnreadCount(prev => Math.max(0, prev - 1));
       fetchNotifications();
@@ -335,6 +349,7 @@ const CoordinatorLayout = () => {
 
     return () => {
       newSocket.off('new_message');
+      newSocket.off('new_chat_notification');
       newSocket.off('chat_notifications_read');
       newSocket.off('all_chat_notifications_read');
       newSocket.off('new_video_call_notification');

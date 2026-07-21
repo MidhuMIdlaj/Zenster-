@@ -15,6 +15,7 @@ export default class Employee {
       public workingStatus: 'Available'| 'Occupied',
       public previousJob?: string | null,
       public experience?:  number | null,
-      public fieldOfMechanic: string[] = []
+      public fieldOfMechanic: string[] = [],
+      public lastAssignedAt?: Date | null
     ) {}
   }

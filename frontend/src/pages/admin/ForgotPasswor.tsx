@@ -19,7 +19,7 @@ export default function AdminForgotPasswordPage() {
 
   // Timer for resend OTP
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     
     if (!canResend && resendTime > 0) {
       timer = setTimeout(() => {

@@ -25,7 +25,20 @@ export class AddEmployeeUseCase implements IAddEmployeeUseCase {
 
     const parsedJoinDate = joinDate instanceof Date ? joinDate : new Date(joinDate);
     if (isNaN(parsedJoinDate.getTime())) throw new ValidationError("Invalid join date format");
-    if (parsedJoinDate > new Date()) throw new ValidationError("Join date cannot be in the future");
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // If joinDate is a string (YYYY-MM-DD), parse as local date
+    let dateToCompare = parsedJoinDate;
+    if (typeof joinDate === 'string') {
+      const [year, month, day] = joinDate.split('-').map(Number);
+      dateToCompare = new Date(year, month - 1, day, 0, 0, 0, 0);
+    } else {
+      dateToCompare.setHours(0, 0, 0, 0);
+    }
+    
+    if (dateToCompare > today) throw new ValidationError("Join date cannot be in the future");
 
     if (isNaN(currentSalary) || currentSalary <= 0) throw new ValidationError("Salary must be positive");
     if (isNaN(age) || age < 18 || age > 80) throw new ValidationError("Age must be between 18 and 80");
@@ -45,7 +58,14 @@ async execute(data: IAddEmployeeDTO): Promise<ResponseDTO<IAddEmployeeDTO>> {
     this.validateInput(data);
 
     const existingEmployee = await this.employeeRepo.findByEmail(data.emailId);
-    if (existingEmployee) throw new ValidationError("Employee with this email already exists");
+    if (existingEmployee) {
+      console.log("This email already exists");
+      return { 
+        success: false, 
+        message: "Employee with this email already exists", 
+        statusCode: StatusCode.BAD_REQUEST 
+      };
+    }
 
     const parsedJoinDate = data.joinDate instanceof Date ? data.joinDate : new Date(data.joinDate);
 

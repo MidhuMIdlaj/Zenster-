@@ -42,21 +42,22 @@ export interface CompletionDetails {
 export interface ComplaintFormData {
   id?: string;
   complaintNumber?: string;
-  customerName: string;
+  customerName?: string;
   customerEmail: string;
-  customerPhone: string;
+  customerPhone?: string;
+  contactNumber?: string;
   description: string;
-  assignedMechanicId?: MechanicAssignment[]; 
+  assignedMechanicId?: string | MechanicAssignment[];
   createdBy: string;
-  status: 'active' | 'completed' | 'cancelled' | 'on-hold' | string; // Added specific types
+  status?: 'active' | 'completed' | 'cancelled' | 'on-hold' | string; // Added specific types
   priority: 'low' | 'medium' | 'high' | 'critical' | string; // Added specific types
   notes?: string;
-  productName: string;
-  address: string;
-  model: string;
-  guaranteeDate: DateType;
-  warrantyDate: DateType;
-  CreatedByRole: 'admin' | 'technician' | 'customer' | string; // Added specific types
+  productName?: string;
+  address?: string;
+  model?: string;
+  guaranteeDate?: DateType;
+  warrantyDate?: DateType;
+  CreatedByRole?: 'admin' | 'technician' | 'customer' | string; // Added specific types
   createdAt?: DateType;
   updatedAt?: DateType;
   workingStatus: 'pending' | 'in-progress' | 'completed' | 'rejected' | string; // Added specific types

@@ -28,7 +28,7 @@ export class CreateComplaintUseCase implements ICreateComplaintUseCase {
     contactNumber?: string;
     description: string;
     selectedProductId?: string;
-    assignedMechanicId?: string;
+    assignedMechanicId?: string | { mechanicId?: string }[];
     createdBy: string;
     priority?: 'low' | 'medium' | 'high';
     notes?: string;
@@ -52,7 +52,9 @@ export class CreateComplaintUseCase implements ICreateComplaintUseCase {
         }
       }
 
-      let assignedMechanicId = data.assignedMechanicId;
+      let assignedMechanicId = Array.isArray(data.assignedMechanicId)
+        ? data.assignedMechanicId[0]?.mechanicId
+        : data.assignedMechanicId;
       let assignedMechanic = null;
 
       if (!assignedMechanicId && productDetails) {
@@ -61,7 +63,7 @@ export class CreateComplaintUseCase implements ICreateComplaintUseCase {
           productDetails.productName || '',
           data.priority || 'medium',
         );
-
+        console.log(assignedMechanic, "assignedMechanic")
         if (!assignedMechanic) {
           assignedMechanicId = undefined;
         } else {
@@ -104,11 +106,13 @@ export class CreateComplaintUseCase implements ICreateComplaintUseCase {
           savedComplaint,
           data.createdBy
         );
+        // Update mechanic's lastAssignedAt for fair workload distribution
+        await this.employeeRepository.updateLastAssignedAt(assignedMechanicId);
       } else {
         console.log(savedComplaint.id, "savedComplaint.id", savedComplaint)
         await this.complaintReassign.scheduleUnavailableMechanicCheck(
           savedComplaint.id.toString(),
-          "in 1 minute"
+          "in 2 hours"
         );
       }
       return { success: true, data: savedComplaint };

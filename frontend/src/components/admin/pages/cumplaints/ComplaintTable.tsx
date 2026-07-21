@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import {
@@ -27,7 +27,6 @@ import {
 } from "../../../../api/cplaint/complaint";
 import { useSelector } from "react-redux";
 import { RootState } from "../../../../store/Store";
-import { Coordinate } from "recharts/types/util/types";
 import ActionButton from "../../../reusableComponent/ActionButton";
 import RefreshButton from "../../../reusableComponent/RefreshButton";
 
@@ -45,7 +44,7 @@ const ComplaintTable: React.FC = () => {
     customerEmail: "",
     contactNumber: "",
     description: "",
-    assignedMechanicId: "",
+    assignedMechanicId: [],
     createdBy: "",
     status: "pending",
     priority: "medium",
@@ -244,7 +243,7 @@ const ComplaintTable: React.FC = () => {
       return;
     }
 
-    if (!formData.contactNumber.trim()) {
+    if (!(formData.contactNumber ?? "").trim()) {
       setSubmitError("Contact number is required");
       return;
     }
@@ -293,7 +292,8 @@ const ComplaintTable: React.FC = () => {
       
       const complaintData = {
         customerEmail: formData.customerEmail,
-        contactNumber: formData.contactNumber,
+        contactNumber: formData.contactNumber ?? "",
+        customerPhone: formData.contactNumber ?? "",
         description: formData.description,
         assignedMechanicId: formData.assignedMechanicId,
         createdBy: CreateBy ?? "",
@@ -341,7 +341,7 @@ const ComplaintTable: React.FC = () => {
       customerEmail: "",
       contactNumber: "",
       description: "",
-      assignedMechanicId: "",
+      assignedMechanicId: [],
       createdBy: "",
       priority: "medium",
       customerName: "",
@@ -604,7 +604,7 @@ const ComplaintTable: React.FC = () => {
             <ComplaintDetails
               complaint={selectedComplaint}
               mechanics={mechanics}
-              coordinator = {coordinator}
+              coordinator={coordinator}
               onClose={() => setShowViewModal(false)}
               onEdit={() => {
                 setShowViewModal(false);

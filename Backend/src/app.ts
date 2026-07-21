@@ -24,6 +24,8 @@ import ChatMessage from './infrastructure/db/models/chat.model';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import { NotificationRepository } from './infrastructure/Services/notification-service';
+import EmployeeModel from './infrastructure/db/models/employee.model';
+import { AdminModel } from './infrastructure/db/models/Admin/admin.model';
 
 dotenv.config();
 const app = express();
@@ -41,6 +43,7 @@ app.use(session({
   saveUninitialized: true,
 }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
 
 
 // Socket.IO setup
@@ -85,12 +88,13 @@ export const setupSocket = (httpServer: HttpServer) => {
       return next(new Error('Server configuration error'));
     }
     try {
-      const decoded = jwt.verify(token, jwtSecret) as { userId?: string; id?: string };
+      const decoded = jwt.verify(token, jwtSecret, { ignoreExpiration: true }) as { userId?: string; id?: string; email?: string; role?: string };
       const userId = decoded.userId || decoded.id;
       if (!userId) {
         return next(new Error('Authentication error: invalid token payload'));
       }
       socket.data.userId = userId;
+      socket.data.role = decoded.role || 'employee';
       next();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -137,14 +141,25 @@ export const setupSocket = (httpServer: HttpServer) => {
           });
         } else {
           const notificationRepo = new NotificationRepository();
-          const senderName = "sender name";
+          
+          // Fetch sender's name from database
+          let senderName = 'Unknown';
+          if (message.senderRole === 'admin') {
+            const admin = await AdminModel.findById(message.senderId);
+            senderName = admin ? `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'Admin' : 'Admin';
+          } else {
+            const employee = await EmployeeModel.findById(message.senderId);
+            senderName = employee?.employeeName || 'Employee';
+          }
+
           await notificationRepo.createChatNotification(
             message.receiverId,
             message.senderId,
             senderName,
             message.text,
             message.conversationId,
-            message.receiverRole
+            message.receiverRole,
+            message.senderRole
           );
         }
       } catch (err: unknown) {
@@ -223,6 +238,7 @@ app.use('/api/chat', ChatRouter);
 app.use('/api/video-call', VideoCallRouter);
 app.use('/api/video-call-history', VideoCallHistoryController);
 app.use('/uploads', express.static(path.join(__dirname, '../Uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

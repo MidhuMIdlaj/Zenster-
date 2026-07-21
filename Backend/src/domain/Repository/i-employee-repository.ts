@@ -52,4 +52,5 @@ export default interface IEmployeeRepository  {
     excludeMechanicId: string
   ): Promise<Employee | null>;
   softDeleteEmployee(employeeId : string): Promise<Employee>
+  updateLastAssignedAt(mechanicId: string): Promise<void>;
 }

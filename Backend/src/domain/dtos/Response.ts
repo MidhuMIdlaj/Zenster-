@@ -6,5 +6,5 @@ export interface ResponseDTO<T = any> {
 
   message?: string;
 
-  statusCode?: number;
+  statusCode: number;
 }

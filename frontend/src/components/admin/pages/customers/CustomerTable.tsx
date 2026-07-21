@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Edit2,
   Trash2,
@@ -147,7 +147,12 @@ const CustomerTable: React.FC = () => {
     }
   ];
 
-  const fetchCustomers = async (page: number = currentPage) => {
+  const MIN_SEARCH_CHARS = 5;
+  const hasInitialized = useRef(false);
+  const isFirstSearchRun = useRef(true);
+
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchCustomers = useCallback(async (page: number) => {
     try {
       setIsRefreshing(true);
       setLoading(true);
@@ -186,60 +191,73 @@ const CustomerTable: React.FC = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [itemsPerPage]);
 
-  const MIN_SEARCH_CHARS = 5;
-  const searchCustomer = async () => {
-    if (searchTerm.length > 0 && searchTerm.length < MIN_SEARCH_CHARS) {
+  // Memoized search function - only takes dependencies it needs
+  const searchCustomerFn = useCallback(
+    async (term: string, status: "all" | "active" | "inactive") => {
+      if (term.length > 0 && term.length < MIN_SEARCH_CHARS) {
+        return;
+      }
+      try {
+        setIsRefreshing(true);
+        setLoading(true);
+        const response = await searchClientsApi(term, status, 1, itemsPerPage);
+
+        if (response && response.success) {
+          const mappedClients = response.clients.map((client: any) => ({
+            id: client._id,
+            name: client.clientName,
+            email: client.email,
+            phone: client.contactNumber,
+            place: client.address?.split(',')[0]?.trim() || 'N/A',
+            district: client.address?.split(',')[1]?.trim() || 'N/A',
+            status: client.status as "active" | "inactive",
+            avatar: client.clientName?.charAt(0) || 'U',
+            attendanceData: client.attendedDate,
+            productName: client.productName || "",
+            quantity: client.quantity || "",
+            brand: client.brand || "",
+            model: client.model || "",
+            warrantyDate: client.warrantyDate || "",
+            guaranteeDate: client.guaranteeDate || ""
+          }));
+          
+          setCustomers(mappedClients);
+          setTotalItems(response.total);
+          setTotalPages(response.totalPages);
+          setCurrentPage(1);
+        }
+      } catch (error) {
+        console.error("Failed to search clients:", error);
+        toast.error("Failed to search customers");
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [itemsPerPage]
+  );
+
+  // Load initial data on component mount (only once)
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchCustomers(1);
+    }
+  }, []); // Runs once on mount
+
+  // Handle search/filter changes with debounce - but only AFTER mount
+  useEffect(() => {
+    // Skip the first run on mount
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
       return;
     }
-    try {
-      setIsRefreshing(true);
-      setLoading(true);
-      const response = await searchClientsApi(
-        searchTerm, 
-        statusFilter, 
-        currentPage, 
-        itemsPerPage
-      );
 
-      if (response && response.success) {
-        const mappedClients = response.clients.map((client: any) => ({
-          id: client._id,
-          name: client.clientName,
-          email: client.email,
-          phone: client.contactNumber,
-          place: client.address?.split(',')[0]?.trim() || 'N/A',
-          district: client.address?.split(',')[1]?.trim() || 'N/A',
-          status: client.status as "active" | "inactive",
-          avatar: client.clientName?.charAt(0) || 'U',
-          attendanceData: client.attendedDate,
-          productName: client.productName || "",
-          quantity: client.quantity || "",
-          brand: client.brand || "",
-          model: client.model || "",
-          warrantyDate: client.warrantyDate || "",
-          guaranteeDate: client.guaranteeDate || ""
-        }));
-        
-        setCustomers(mappedClients);
-        setTotalItems(response.total);
-        setTotalPages(response.totalPages);
-        setCurrentPage(response.currentPage);
-      }
-    } catch (error) {
-      console.error("Failed to search clients:", error);
-      toast.error("Failed to search customers");
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
     const debounceTimer = setTimeout(() => {
       if (searchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all') {
-        searchCustomer();
+        searchCustomerFn(searchTerm, statusFilter);
       } else if (searchTerm.length === 0 && statusFilter === 'all') {
         fetchCustomers(1);
       }
@@ -247,9 +265,14 @@ const CustomerTable: React.FC = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchTerm, statusFilter]);
 
+  // Handle page changes separately
   useEffect(() => {
+    if (currentPage === 1) {
+      return;
+    }
+
     if (searchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all') {
-      searchCustomer();
+      searchCustomerFn(searchTerm, statusFilter);
     } else {
       fetchCustomers(currentPage);
     }
@@ -265,11 +288,7 @@ const CustomerTable: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    if (searchTerm || statusFilter !== 'all') {
-      searchCustomer();
-    } else {
-      fetchCustomers(page);
-    }
+    // Page change will trigger the useEffect that handles fetching
   };
 
   const toggleStatus = async (id: string) => {
@@ -414,8 +433,9 @@ const CustomerTable: React.FC = () => {
         toast.success('Client added successfully');
       }
       
+      // Refresh the list based on current search/filter state
       if (searchTerm || statusFilter !== 'all') {
-        await searchCustomer();
+        await searchCustomerFn(searchTerm, statusFilter);
       } else {
         await fetchCustomers(currentPage);
       }
@@ -442,10 +462,11 @@ const CustomerTable: React.FC = () => {
       setShowDeleteConfirm(false);
       setSelectedCustomer(null);
       
+      // Refresh the list based on current search/filter state
       if (searchTerm || statusFilter !== 'all') {
-        await searchCustomer();
+        await searchCustomerFn(searchTerm, statusFilter);
       } else {
-        await fetchCustomers();
+        await fetchCustomers(currentPage);
       }
     } catch (error) {
       console.error("Soft delete failed:", error);
@@ -513,9 +534,9 @@ const CustomerTable: React.FC = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => {
                 if (searchTerm || statusFilter !== 'all') {
-                  searchCustomer();
+                  searchCustomerFn(searchTerm, statusFilter);
                 } else {
-                  fetchCustomers();
+                  fetchCustomers(currentPage);
                 }
               }}
               className={`flex items-center gap-2 p-2 rounded-full ${isRefreshing ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'}`}
@@ -713,4 +734,4 @@ const CustomerTable: React.FC = () => {
   )
 };
 
-export default CustomerTable;
+export default React.memo(CustomerTable);

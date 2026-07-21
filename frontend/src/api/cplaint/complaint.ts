@@ -139,15 +139,6 @@ export const rejectComplaint = async (
 };
 
 
-interface CompleteTaskParams {
-  taskId: string;
-  mechanicId: string;
-  description: string;
-  paymentStatus: string;
-  paymentMethod?: string | null;
-  amount: number;
-  photos: File[];
-}
 
 export const completeTask = async (
   taskId: string,
@@ -156,7 +147,8 @@ export const completeTask = async (
   paymentStatus : string,
   paymentMethod : string,
   amount : number,
-  photos: File[]
+  photos: File[],
+  isUnderWarranty = false
 ) => {
   try {
     const formData = new FormData();
@@ -165,6 +157,7 @@ export const completeTask = async (
     formData.append('description', description);
     formData.append('paymentStatus', paymentStatus);
     formData.append('amount', amount.toString());
+    formData.append('isUnderWarranty', String(isUnderWarranty));
 
     if (paymentMethod) {
       formData.append('paymentMethod', paymentMethod);

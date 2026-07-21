@@ -9,7 +9,9 @@ import {
   Camera,
   Trash2,
   DollarSign,
-  QrCode
+  QrCode,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -173,6 +175,7 @@ interface CompletionModalProps {
   onSubmit: (data: CompletionData) => Promise<void>;
   taskTitle: string;
   customerName: string;
+  isUnderWarranty?: boolean;
   isLoading?: boolean;
 }
 
@@ -182,6 +185,7 @@ interface CompletionData {
   amount: number;
   paymentStatus: string;
   paymentMothod?: string | null;
+  isUnderWarranty?: boolean;
 }
 
 const TaskCompletionModal: React.FC<CompletionModalProps> = ({
@@ -190,6 +194,7 @@ const TaskCompletionModal: React.FC<CompletionModalProps> = ({
   onSubmit,
   taskTitle,
   customerName,
+  isUnderWarranty = false,
   isLoading = false
 }) => {
   const [description, setDescription] = useState('');
@@ -339,6 +344,21 @@ const TaskCompletionModal: React.FC<CompletionModalProps> = ({
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+    if (isUnderWarranty) {
+      await onSubmit({
+        description: description.trim(),
+        photos,
+        amount: 0,
+        paymentStatus: 'not_required',
+        paymentMothod: 'warranty',
+        isUnderWarranty: true
+      });
+      setDescription('');
+      setPhotos([]);
+      setErrors({});
+      onClose();
+      return;
+    }
     setShowPaymentModal(true);
   };
 
@@ -390,6 +410,20 @@ const TaskCompletionModal: React.FC<CompletionModalProps> = ({
     setShowPaymentModal(false);
     onClose();
   };
+
+  const warrantyBadge = isUnderWarranty
+    ? {
+        text: 'Warranty Covered',
+        description: 'No service charge or payment proof is required for this product.',
+        icon: ShieldCheck,
+        colorClass: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      }
+    : {
+        text: 'Not Under Warranty',
+        description: 'A service charge and payment proof will be required before completion.',
+        icon: ShieldAlert,
+        colorClass: 'border-amber-200 bg-amber-50 text-amber-700'
+      };
 
   const generateQRCodeData = () => {
     const amount = Number(serviceAmount).toFixed(2);
@@ -451,6 +485,14 @@ const TaskCompletionModal: React.FC<CompletionModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          <div className={`rounded-xl border p-4 flex items-start gap-3 ${warrantyBadge.colorClass}`}>
+            <warrantyBadge.icon className="mt-0.5 flex-shrink-0" size={18} />
+            <div>
+              <p className="font-semibold">{warrantyBadge.text}</p>
+              <p className="text-sm mt-1">{warrantyBadge.description}</p>
+            </div>
+          </div>
+
           {/* Work Description Section */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
@@ -597,7 +639,7 @@ const TaskCompletionModal: React.FC<CompletionModalProps> = ({
               ) : (
                 <>
                   <CheckCircle size={18} />
-                  <span>Process Payment</span>
+                  <span>{isUnderWarranty ? 'Complete Task' : 'Continue to Payment'}</span>
                 </>
               )}
             </button>
@@ -607,7 +649,7 @@ const TaskCompletionModal: React.FC<CompletionModalProps> = ({
             <p className="text-xs text-blue-700 flex items-start">
               <AlertCircle size={14} className="mr-2 mt-0.5 flex-shrink-0" />
               <span>
-                <strong>Note:</strong> After entering completion details, you'll be prompted to process payment and upload a payment screenshot before finalizing the task completion.
+                <strong>Note:</strong> {isUnderWarranty ? 'This product is under warranty, so no service charge or payment proof is required.' : 'This product is not under warranty, so the payment step will appear after the completion details are submitted.'}
               </span>
             </p>
           </div>

@@ -57,7 +57,7 @@ export default class UserRepoImpl implements IUserRepository {
     const users = await ClientModel.find({ isDeleted: false }, 'email clientName').lean();
     return users.map((user: any) => ({
       email: user.email,
-      name: user.name
+      name: user.clientName
     }));
   }
   async addProductsToClient(

@@ -84,7 +84,7 @@ export class RejectComplaintUseCase  implements IRejectComplaintUseCase{
         complaint: updatedComplaint
       };
     } else {
-      await this.complaintReassign.scheduleReassignment(complaintId, mechanicId, "in 1 minutes");
+      await this.complaintReassign.scheduleReassignment(complaintId, mechanicId, "in 2 hours");
 
       await this.emailServices.sendComplaintReassignmentEmail(creatorEmail, {
         complaintId,
@@ -96,7 +96,7 @@ export class RejectComplaintUseCase  implements IRejectComplaintUseCase{
         },
         newMechanic: {
           id: '',
-          name: 'Will be reassigned after 1 hour'
+          name: 'Will be reassigned after 2 hours'
         },
         rejectionReason: reason,
         coordinatorName: creatorEmail
@@ -104,7 +104,7 @@ export class RejectComplaintUseCase  implements IRejectComplaintUseCase{
 
       return {
         success: true,
-        message: "Reassignment scheduled after 30 min",
+        message: "Reassignment scheduled after 2 hours",
         complaint: rejectedComplaint
       };
     }

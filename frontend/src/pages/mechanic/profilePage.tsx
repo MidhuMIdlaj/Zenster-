@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { PenTool as Tool, User, Mail, Calendar, Phone, MapPin, DollarSign, Briefcase, Clock } from 'lucide-react';
+import { PenTool as Tool, User, Mail, Calendar, Phone, MapPin, DollarSign, Briefcase, Clock, ChartNoAxesColumn } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { selectEmployeeAuthData } from '../../store/selectors';
 import { EmployeeAPI } from '../../api/employee/employee';
@@ -125,7 +125,7 @@ const MechanicProfile = () => {
   if (!profileData) {
     return <div className="p-6">No profile data available</div>;
   }
-
+  console.log(profileData, "12341234")
   return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -230,6 +230,13 @@ const MechanicProfile = () => {
               {/* Personal Info */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">Personal Information</h2>
+                 <div className="flex items-start space-x-3">
+                  <User size={20} className="text-blue-600 mt-1" />
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="text-gray-800">{profileData.employeeName}</p>
+                  </div>
+                </div>
 
                 <div className="flex items-start space-x-3">
                   <Mail size={20} className="text-blue-600 mt-1" />

@@ -33,8 +33,7 @@ export default function Sidebar({
     { 
       name: 'Chat', 
       icon: <MessageSquare className="w-5 h-5" />, 
-      path: '/employee-chat',
-      badge: unreadCount > 0 ? unreadCount : null
+      path: '/employee-chat'
     },
   ];
 
@@ -94,12 +93,6 @@ export default function Sidebar({
               <span className="mr-3 flex-shrink-0">{tab.icon}</span>
               {expanded && (
                 <span className="truncate">{tab.name}</span>
-              )}
-              {/* Chat Badge */}
-              {tab.badge && tab.badge > 0 && (
-                <span className="ml-auto bg-red-500 text-white rounded-full px-2 py-1 text-xs font-medium min-w-[20px] h-5 flex items-center justify-center">
-                  {tab.badge > 99 ? '99+' : tab.badge}
-                </span>
               )}
             </button>
           </div>

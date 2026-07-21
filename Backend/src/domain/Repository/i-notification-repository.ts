@@ -50,7 +50,8 @@ export interface INotificationRepository {
     senderName: string,
     messageText: string,
     conversationId: string,
-    recipientRole: string
+    recipientRole: string,
+    senderRole: string
   ): Promise<INotification>;
 
   getUnreadChatNotifications(userId: string, role: string): Promise<{ success: boolean; notifications?: INotification[]; error?: string }>;

@@ -13,7 +13,7 @@ import {
   Shield,
   Clock as ClockIcon,
 } from "lucide-react";
-import { Customer }  from "./CustomerTable";
+import { User as Customer } from "../../../../pages/coordinator/userManagement";
 
 interface CustomerDetailsProps {
   customer: Customer
@@ -26,7 +26,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   onClose,
   onEdit,
 }) => {
-    console.log(customer, "1241234")
+  const primaryProduct = customer.products?.[0];
+  const productName = primaryProduct?.productName || customer.productName;
+  const quantity = primaryProduct?.quantity || customer.quantity;
+  const brand = primaryProduct?.brand || customer.brand;
+  const model = primaryProduct?.model || customer.model;
+  const warrantyDate = primaryProduct?.warrantyDate || customer.warrantyDate;
+  const guaranteeDate = primaryProduct?.guaranteeDate || customer.guaranteeDate;
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -72,7 +79,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-gray-500">Email</div>
-                <div className="text-gray-800">{customer.name}</div>
+                <div className="text-gray-800">{customer.email}</div>
               </div>
             </div>
             <div className="flex gap-2">
@@ -105,28 +112,28 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <Package className="h-5 w-5 text-gray-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-gray-500">Product Name</div>
-                <div className="text-gray-800">{customer.productName || "N/A"}</div>
+                <div className="text-gray-800">{productName || "N/A"}</div>
               </div>
             </div>
             <div className="flex gap-2">
               <Layers className="h-5 w-5 text-gray-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-gray-500">Quantity</div>
-                <div className="text-gray-800">{customer.quantity || "N/A"}</div>
+                <div className="text-gray-800">{quantity || "N/A"}</div>
               </div>
             </div>
             <div className="flex gap-2">
               <Tag className="h-5 w-5 text-gray-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-gray-500">Brand</div>
-                <div className="text-gray-800">{customer.brand || "N/A"}</div>
+                <div className="text-gray-800">{brand || "N/A"}</div>
               </div>
             </div>
             <div className="flex gap-2">
               <Smartphone className="h-5 w-5 text-gray-400 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium text-gray-500">Model</div>
-                <div className="text-gray-800">{customer.model || "N/A"}</div>
+                <div className="text-gray-800">{model || "N/A"}</div>
               </div>
             </div>
             <div className="flex gap-2">
@@ -134,7 +141,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <div>
                 <div className="text-sm font-medium text-gray-500">Warranty Date</div>
                 <div className="text-gray-800">
-                  {customer.warrantyDate ? new Date(customer.warrantyDate).toLocaleDateString() : "N/A"}
+                  {warrantyDate ? new Date(warrantyDate).toLocaleDateString() : "N/A"}
                 </div>
               </div>
             </div>
@@ -143,7 +150,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <div>
                 <div className="text-sm font-medium text-gray-500">Guarantee Date</div>
                 <div className="text-gray-800">
-                  {customer.guaranteeDate ? new Date(customer.guaranteeDate).toLocaleDateString() : "N/A"}
+                  {guaranteeDate ? new Date(guaranteeDate).toLocaleDateString() : "N/A"}
                 </div>
               </div>
             </div>

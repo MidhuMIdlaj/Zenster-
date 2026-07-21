@@ -21,6 +21,7 @@ interface FormData {
   products: Product[];
   status: string;
   lastLogin?: string;
+  role?: string;
 }
 
 interface CustomerFormProps {
@@ -70,7 +71,9 @@ const validateDate = (date: string, fieldName: string, disallowFuture: boolean =
   if (!date) return `${fieldName} is required`;
   if (!dateRegex.test(date)) return `${fieldName} must be in YYYY-MM-DD format`;
   
-  const inputDate = new Date(date);
+  // Parse YYYY-MM-DD as local date, not UTC
+  const [year, month, day] = date.split('-').map(Number);
+  const inputDate = new Date(year, month - 1, day, 0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -219,13 +222,15 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     }
   }, [formData, formStep]);
 
+  // Only reset form when modal opens, not when initialData changes
+  // This prevents the form from resetting when parent re-renders
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData);
       setFormStep(1);
       setTouched({});
     }
-  }, [initialData, isOpen]);
+  }, [isOpen]); // Only depend on isOpen, not initialData
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -349,7 +354,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
       transition: { duration: 0.3 } 
     }
   };
-
+  
   if (!isOpen) return null;
 
   return (

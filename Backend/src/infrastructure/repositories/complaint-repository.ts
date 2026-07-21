@@ -1,5 +1,5 @@
 import IComplaintRepository from '../../domain/Repository/i-complaint-repository';
-import {ComplaintDocument, ComplaintModel} from "../db/complaint.model"
+import { ComplaintDocument, ComplaintModel } from "../db/complaint.model"
 import Complaint from '../../domain/entities/Complaint';
 import { ServerError } from '../../domain/error/complaintError';
 import EmployeeModel from '../db/models/employee.model'
@@ -70,7 +70,7 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
   //   return ComplaintModel.findById(id).lean();
   // }
 
-  async rejectAssignment(complaintId: string, mechanicId: string, reason: string):Promise<IComplaintRepoReturn | null> {
+  async rejectAssignment(complaintId: string, mechanicId: string, reason: string): Promise<IComplaintRepoReturn | null> {
     return ComplaintModel.findOneAndUpdate(
       {
         _id: complaintId,
@@ -93,13 +93,20 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
     );
   }
 
-  async reassignComplaint(complaintId: string, newMechanicId: string, assignedBy: string): Promise<ComplaintDocument | null>{
+  async reassignComplaint(complaintId: string, newMechanicId: string, assignedBy: string): Promise<ComplaintDocument | null> {
     const newAssignment = {
       mechanicId: newMechanicId,
       assignedAt: new Date(),
       status: "pending",
       assignedBy
     };
+
+    // Update mechanic's lastAssignedAt timestamp
+    await EmployeeModel.findByIdAndUpdate(
+      newMechanicId,
+      { lastAssignedAt: new Date() },
+      { new: true }
+    ).catch(err => console.error('Error updating lastAssignedAt:', err));
 
     return ComplaintModel.findByIdAndUpdate(
       complaintId,
@@ -143,7 +150,7 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
   }
 
 
-   async deleteComplaint(id: string): Promise<IDeleteComplaintUsecase> {
+  async deleteComplaint(id: string): Promise<IDeleteComplaintUsecase> {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid complaint ID format");
     }
@@ -154,7 +161,7 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
 
     const employeeId = findMechanicComplaint.assignedMechanics[0]?.mechanicId;
 
-    await EmployeeModel.updateOne({_id : employeeId} , {$set :{workingStatus : 'Available'}})
+    await EmployeeModel.updateOne({ _id: employeeId }, { $set: { workingStatus: 'Available' } })
 
     const result = await ComplaintModel.updateOne(
       { _id: id },
@@ -169,20 +176,20 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
     return result;
   }
 
- async getAllComplaints(): Promise<IComplaintRepoReturn[]> {
-  try {
-    const complaints = await ComplaintModel.find({ isDeleted: { $ne: true } })
-      .populate('assignedMechanics.mechanicId') 
-      .lean() 
-      .sort({ createdAt: -1 });
-    return complaints.map((complaint) => this.mapToComplaint(complaint));
-  } catch (error) {
-    console.error('Error fetching complaints:', error);
-    throw new ServerError('Failed to fetch complaints');
+  async getAllComplaints(): Promise<IComplaintRepoReturn[]> {
+    try {
+      const complaints = await ComplaintModel.find({ isDeleted: { $ne: true } })
+        .populate('assignedMechanics.mechanicId')
+        .lean()
+        .sort({ createdAt: -1 });
+      return complaints.map((complaint) => this.mapToComplaint(complaint));
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      throw new ServerError('Failed to fetch complaints');
+    }
   }
-}
 
- async getComplaintsByMechanic(mechanicId: string): Promise<IGetComplaintMechanicUsecase[]> {
+  async getComplaintsByMechanic(mechanicId: string): Promise<IGetComplaintMechanicUsecase[]> {
     try {
       const complaints = await ComplaintModel.find({
         "assignedMechanics.mechanicId": mechanicId,
@@ -190,34 +197,34 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
       }).lean()
 
 
-   return complaints.map((doc) => {
-      const mechanicAssignment = doc.assignedMechanics.find(
-        (m) => m.mechanicId.toString() === mechanicId
-      );
+      return complaints.map((doc) => {
+        const mechanicAssignment = doc.assignedMechanics.find(
+          (m) => m.mechanicId.toString() === mechanicId
+        );
 
-      return {
-        id: doc._id.toString(),
-        titel: doc.description,
-        clientName: doc.customerName,
-        customerEmail: doc.customerEmail || '', 
-        customerPhone: doc.customerPhone || '', 
-        location: doc.address || '',
-        status: mechanicAssignment?.status || 'pending', 
-        assignedMechanics: doc.assignedMechanics.map((m) => ({
-          mechanicId: m.mechanicId.toString(),
-          status: m.status
-        })),
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt,
-        workingStatus: doc.workingStatus || 'pending', // Fallback if undefined
-        priority: doc.priority || 'medium' // Added priority with default value
-      };
-    });
+        return {
+          id: doc._id.toString(),
+          titel: doc.description,
+          clientName: doc.customerName,
+          customerEmail: doc.customerEmail || '',
+          customerPhone: doc.customerPhone || '',
+          location: doc.address || '',
+          status: mechanicAssignment?.status || 'pending',
+          assignedMechanics: doc.assignedMechanics.map((m) => ({
+            mechanicId: m.mechanicId.toString(),
+            status: m.status
+          })),
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+          workingStatus: doc.workingStatus || 'pending', // Fallback if undefined
+          priority: doc.priority || 'medium' // Added priority with default value
+        };
+      });
     } catch (error) {
       throw new Error("Failed to fetch mechanic complaints");
     }
   }
-  
+
 
   async getComplaintById(complaintId: string): Promise<IComplaintRepoReturn | null> {
     try {
@@ -244,25 +251,25 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
     }
   }
 
-   async acceptComplaint(complaintId: string, mechanicId: string):Promise<IAcceptComplaintUsecase> {
+  async acceptComplaint(complaintId: string, mechanicId: string): Promise<IAcceptComplaintUsecase> {
     try {
       const result = await ComplaintModel.updateOne(
-        {_id  : complaintId},
+        { _id: complaintId },
         {
           $set: {
             "assignedMechanics.0.mechanicId": mechanicId,
-            workingStatus : "progress",
+            workingStatus: "progress",
             status: "Assigned",
           },
         },
         { new: true }
       );
       const mechanicUpdate = await EmployeeModel.updateOne(
-      { _id: mechanicId },
-      { $set: { workingStatus: "Occupied" } }
-     );
+        { _id: mechanicId },
+        { $set: { workingStatus: "Occupied" } }
+      );
 
-      if(!mechanicUpdate){
+      if (!mechanicUpdate) {
         return { success: false, message: "Complaint not found" };
       }
 
@@ -278,149 +285,149 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
   }
 
   async updateComplaintStatus(
-  complaintId: string,
-  status: string,
-  updatedBy: string
-): Promise<IComplaintRepoReturn | null> {
-  try {
-    await ComplaintModel.updateOne(
-      {
-        _id: complaintId,
-        'assignedMechanics.mechanicId': updatedBy
-      },
-      {
-        $set: {
-          'assignedMechanics.$.status': status,
-          'workingStatus': status,
-          'status.status': status,
-          'status.updatedAt': new Date(),
-          'status.updatedBy': updatedBy,
-          updatedAt: new Date()
-        }
-      }
-    );
-
-    const complaint = await ComplaintModel.findById(complaintId);
-
-    await EmployeeModel.updateOne({
-      _id: updatedBy,
-    }, {
-      $set: {
-        workingStatus:'Available'
-      }
-    });
-    
-    return complaint ? this.mapToComplaint(complaint) : null;
-  } catch (error) {
-    console.error('Error updating complaint status:', error);
-    throw new ServerError('Failed to update complaint status');
-  }
-}
-
-
- async completeTask(
-  taskId: string,
-  mechanicId: string,
-  description: string,
-  photoNames: string[], 
-  paymentStatus?: string,
-  amount?: number,
-  paymentMethod?: string,
-): Promise<ICompleteTaskUsecase | null> {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(taskId)) {
-      console.error(`Invalid taskId: ${taskId}`);
-      throw new ServerError('Invalid task ID');
-    }
-    if (!mongoose.Types.ObjectId.isValid(mechanicId)) {
-      console.error(`Invalid mechanicId: ${mechanicId}`);
-      throw new ServerError('Invalid mechanic ID');
-    }
-    let complaint = await ComplaintModel.findOne({ _id: taskId }).lean().exec();
-    if (!complaint) {
-      console.error(`Complaint not found for taskId: ${taskId}`);
-      throw new ServerError('Task not found');
-    }
-
-    if (typeof complaint.status === 'string') {
-      const updateResult = await ComplaintModel.updateOne(
-        { _id: taskId },
+    complaintId: string,
+    status: string,
+    updatedBy: string
+  ): Promise<IComplaintRepoReturn | null> {
+    try {
+      await ComplaintModel.updateOne(
+        {
+          _id: complaintId,
+          'assignedMechanics.mechanicId': updatedBy
+        },
         {
           $set: {
-            status: {
-              status: complaint.status || 'Assigned',
-              updatedBy: complaint.createdBy || mechanicId
-            }
-          }
-        }
-      );
-      if (updateResult.modifiedCount === 0) {
-        console.error(`Failed to fix status field for ${taskId}`);
-        throw new ServerError('Failed to fix invalid status field');
-      }
-      complaint = await ComplaintModel.findOne({ _id: taskId }).lean().exec();
-      if (!complaint || typeof complaint.status === 'string') {
-        console.error(`Status field fix verification failed for ${taskId}:`, complaint?.status);
-        throw new ServerError('Failed to verify status field fix');
-      }
-    } else if (!complaint.status || typeof complaint.status !== 'object' || !complaint.status.status) {
-      const updateResult = await ComplaintModel.updateOne(
-        { _id: taskId },
-        {
-          $set: {
-            status: {
-              status: 'Assigned',
-              updatedAt: new Date(),
-              updatedBy: complaint.createdBy || mechanicId
-            }
+            'assignedMechanics.$.status': status,
+            'workingStatus': status,
+            'status.status': status,
+            'status.updatedAt': new Date(),
+            'status.updatedBy': updatedBy,
+            updatedAt: new Date()
           }
         }
       );
 
-      complaint = await ComplaintModel.findOne({ _id: taskId }).lean().exec();
-    }
+      const complaint = await ComplaintModel.findById(complaintId);
 
-    const updatedComplaint = await ComplaintModel.findOneAndUpdate(
-      {
-        _id: taskId,
-        'assignedMechanics.mechanicId': mechanicId
-      },
-      {
+      await EmployeeModel.updateOne({
+        _id: updatedBy,
+      }, {
         $set: {
-          'assignedMechanics.$.status': 'completed',
-          'workingStatus': 'completed',
-          'status.status': 'completed',
-          'status.updatedAt': new Date(),
-          'status.updatedBy': mechanicId,
-          'completionDetails.description': description,
-          'completionDetails.photos': photoNames,
-          'complainttDetails.paymentStatus': paymentStatus,
-          'completionDetails.amount': amount,
-          'completionDetails.paymentMethod': 'completed',
-          'completionDetails.completedAt': new Date(),
-          'completionDetails.completedBy': mechanicId,
-          'updatedAt': new Date()
+          workingStatus: 'Available'
         }
-      },
-      { new: true }
-    );
+      });
 
-    if (!updatedComplaint) {
-      console.error(`No matching complaint found for taskId: ${taskId}, mechanicId: ${mechanicId}`);
-      throw new ServerError('Task not found or mechanic not assigned to this task');
+      return complaint ? this.mapToComplaint(complaint) : null;
+    } catch (error) {
+      console.error('Error updating complaint status:', error);
+      throw new ServerError('Failed to update complaint status');
     }
-
-    // Update employee status
-    const employeeUpdateResult = await EmployeeModel.updateOne(
-      { _id: mechanicId },
-      { $set: { workingStatus: 'Available' } }
-    );
-    return this.mapToComplaint(updatedComplaint);
-  } catch (error) {
-    console.error(`Error completing task (taskId: ${taskId}, mechanicId: ${mechanicId}):`, error);
-    throw new ServerError(`Failed to complete task: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
+
+
+  async completeTask(
+    taskId: string,
+    mechanicId: string,
+    description: string,
+    photoNames: string[],
+    paymentStatus?: string,
+    amount?: number,
+    paymentMethod?: string,
+  ): Promise<ICompleteTaskUsecase | null> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(taskId)) {
+        console.error(`Invalid taskId: ${taskId}`);
+        throw new ServerError('Invalid task ID');
+      }
+      if (!mongoose.Types.ObjectId.isValid(mechanicId)) {
+        console.error(`Invalid mechanicId: ${mechanicId}`);
+        throw new ServerError('Invalid mechanic ID');
+      }
+      let complaint = await ComplaintModel.findOne({ _id: taskId }).lean().exec();
+      if (!complaint) {
+        console.error(`Complaint not found for taskId: ${taskId}`);
+        throw new ServerError('Task not found');
+      }
+
+      if (typeof complaint.status === 'string') {
+        const updateResult = await ComplaintModel.updateOne(
+          { _id: taskId },
+          {
+            $set: {
+              status: {
+                status: complaint.status || 'Assigned',
+                updatedBy: complaint.createdBy || mechanicId
+              }
+            }
+          }
+        );
+        if (updateResult.modifiedCount === 0) {
+          console.error(`Failed to fix status field for ${taskId}`);
+          throw new ServerError('Failed to fix invalid status field');
+        }
+        complaint = await ComplaintModel.findOne({ _id: taskId }).lean().exec();
+        if (!complaint || typeof complaint.status === 'string') {
+          console.error(`Status field fix verification failed for ${taskId}:`, complaint?.status);
+          throw new ServerError('Failed to verify status field fix');
+        }
+      } else if (!complaint.status || typeof complaint.status !== 'object' || !complaint.status.status) {
+        const updateResult = await ComplaintModel.updateOne(
+          { _id: taskId },
+          {
+            $set: {
+              status: {
+                status: 'Assigned',
+                updatedAt: new Date(),
+                updatedBy: complaint.createdBy || mechanicId
+              }
+            }
+          }
+        );
+
+        complaint = await ComplaintModel.findOne({ _id: taskId }).lean().exec();
+      }
+
+      const updatedComplaint = await ComplaintModel.findOneAndUpdate(
+        {
+          _id: taskId,
+          'assignedMechanics.mechanicId': mechanicId
+        },
+        {
+          $set: {
+            'assignedMechanics.$.status': 'completed',
+            'workingStatus': 'completed',
+            'status.status': 'completed',
+            'status.updatedAt': new Date(),
+            'status.updatedBy': mechanicId,
+            'completionDetails.description': description,
+            'completionDetails.photos': photoNames,
+            'completionDetails.paymentStatus': paymentStatus,
+            'completionDetails.amount': amount,
+            'completionDetails.paymentMethod': paymentMethod,
+            'completionDetails.completedAt': new Date(),
+            'completionDetails.completedBy': mechanicId,
+            'updatedAt': new Date()
+          }
+        },
+        { new: true }
+      );
+
+      if (!updatedComplaint) {
+        console.error(`No matching complaint found for taskId: ${taskId}, mechanicId: ${mechanicId}`);
+        throw new ServerError('Task not found or mechanic not assigned to this task');
+      }
+
+      // Update employee status
+      const employeeUpdateResult = await EmployeeModel.updateOne(
+        { _id: mechanicId },
+        { $set: { workingStatus: 'Available' } }
+      );
+      return this.mapToComplaint(updatedComplaint);
+    } catch (error) {
+      console.error(`Error completing task (taskId: ${taskId}, mechanicId: ${mechanicId}):`, error);
+      throw new ServerError(`Failed to complete task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 
 
   async assignComplaint(
@@ -460,35 +467,35 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
   }
 
   private mapToComplaint(doc: any): IComplaintRepoReturn {
-  return {
-    id: doc._id.toString(),
-    complaintNumber: doc.complaintNumber,
-    customerEmail: doc.customerEmail,
-    customerPhone: doc.customerPhone,
-    description: doc.description,
-    assignedMechanicId: doc.assignedMechanics?.map((assignment: any) => ({
-      mechanicId: assignment.mechanicId?._id || assignment.mechanicId,
-      status: assignment.status,
-      reason: assignment.reason || null
-    })) || [],
-    createdBy: doc.createdBy,
-    status: doc.status?.status || 'active',
-    priority: doc.priority || 'medium',
-    customerName: doc.customerName,
-    notes: doc.notes || '',
-    productName: doc.productName || '',
-    address: doc.address || '',
-    model: doc.productModel || '',
-    guaranteeDate: doc.guaranteeDate,
-    warrantyDate: doc.warrantyDate,
-    CreatedByRole: doc.CreatedByRole || 'customer',
-    createdAt: doc.createdAt || new Date(),
-    updatedAt: doc.updatedAt || new Date(),
-    workingStatus: doc.workingStatus || 'pending',
-    rejectionReason: doc.rejectionReason,
-    isDeleted: doc.isDeleted === 'true' ? true : false,
-    completionDetails: doc.completionDetails
-      ? {
+    return {
+      id: doc._id.toString(),
+      complaintNumber: doc.complaintNumber,
+      customerEmail: doc.customerEmail,
+      customerPhone: doc.customerPhone,
+      description: doc.description,
+      assignedMechanicId: doc.assignedMechanics?.map((assignment: any) => ({
+        mechanicId: assignment.mechanicId?._id || assignment.mechanicId,
+        status: assignment.status,
+        reason: assignment.reason || null
+      })) || [],
+      createdBy: doc.createdBy,
+      status: doc.status?.status || 'active',
+      priority: doc.priority || 'medium',
+      customerName: doc.customerName,
+      notes: doc.notes || '',
+      productName: doc.productName || '',
+      address: doc.address || '',
+      model: doc.productModel || '',
+      guaranteeDate: doc.guaranteeDate,
+      warrantyDate: doc.warrantyDate,
+      CreatedByRole: doc.CreatedByRole || 'customer',
+      createdAt: doc.createdAt || new Date(),
+      updatedAt: doc.updatedAt || new Date(),
+      workingStatus: doc.workingStatus || 'pending',
+      rejectionReason: doc.rejectionReason,
+      isDeleted: doc.isDeleted === 'true' ? true : false,
+      completionDetails: doc.completionDetails
+        ? {
           description: doc.completionDetails.description || '',
           photos: doc.completionDetails.photos || [],
           completedAt: doc.completionDetails.completedAt,
@@ -497,7 +504,7 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
           amount: doc.completionDetails.amount || 0,
           paymentMethod: doc.completionDetails.paymentMethod || ''
         }
-      : undefined
-   };
+        : undefined
+    };
   }
- }
+}

@@ -1,36 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
-import { Mechanic } from "../../../../types/complaint";
+import { ComplaintFormData, Mechanic } from "../../../../types/complaint";
 import { Product } from "../../../../types/dashboard";
 
 export type DateType = Date | string;
 interface ComplaintFormStep2Props {
-    formData: {
-        id?: string;
-        customerName?: string;
-        customerEmail: string;
-        contactNumber: string;
-        description: string;
-        assignedMechanicId: string;
-        createdBy: string;
-        CreatedByRole?: string;
-        createdByEmail?: string;
-        priority: string;
-        notes?: string;
-        createdAt?: DateType;
-        updatedAt?: DateType;
-        resolvedAt?: DateType;
-        productName?: string;
-        address?: string;
-        model?: string;
-        warrantyDate?: DateType;
-        guaranteeDate?: DateType;
-        status?: string;
-        workingStatus?: string;
-        selectedProductId?: string;
-        products?: (Product & { _id?: string })[]
-    };
+    formData: ComplaintFormData;
     mechanics: Mechanic[];
     isSubmitting: boolean;
     submitSuccess: boolean;
@@ -45,8 +21,7 @@ interface ComplaintFormStep2Props {
 
 // Helper function to safely get product ID
 const getProductId = (product: Product & { _id?: string }, index: number): string => {
-    // Return the first available ID in this priority order
-    return product.id || product._id || `temp-product-${index}`;
+    return product.id || product._id || "";
 };
 
 const ComplaintFormStep2: React.FC<ComplaintFormStep2Props> = ({
@@ -65,7 +40,7 @@ const ComplaintFormStep2: React.FC<ComplaintFormStep2Props> = ({
     const [normalizedProducts, setNormalizedProducts] = useState<(Product & { _id?: string, tempId?: string })[]>([]);
 
     const assignedMechanic = mechanics.find(
-        (m) => m.mechanicId === formData.assignedMechanicId
+        (m) => m.mechanicId === (typeof formData.assignedMechanicId === "string" ? formData.assignedMechanicId : "")
     );
 
     // Normalize products array to ensure all products have a reliable ID
@@ -75,7 +50,7 @@ const ComplaintFormStep2: React.FC<ComplaintFormStep2Props> = ({
                 const normalizedId = getProductId(product, index);
                 return {
                     ...product,
-                    tempId: normalizedId
+                    tempId: normalizedId || `temp-product-${index}`
                 };
             });
             
@@ -119,10 +94,11 @@ const ComplaintFormStep2: React.FC<ComplaintFormStep2Props> = ({
     setSelectedProduct(product);
     setShowProductSelect(false);
     
+    const selectedId = product.id || product._id || "";
     handleInputChange({
       target: {
         name: "selectedProductId",
-        value: product.tempId || productId
+        value: selectedId
       }
     } as React.ChangeEvent<HTMLInputElement>);
 
@@ -248,7 +224,7 @@ const ComplaintFormStep2: React.FC<ComplaintFormStep2Props> = ({
                         <p className="text-sm font-medium text-gray-500">Email</p>
                         <p className="text-gray-900 mt-1">{formData.customerEmail}</p>
                         <p className="text-sm font-medium text-gray-500 mt-3">Phone</p>
-                        <p className="text-gray-900">{formData.contactNumber}</p>
+                        <p className="text-gray-900">{formData.contactNumber || 'N/A'}</p>
                     </div>
 
                     {/* Complaint Details */}

@@ -6,6 +6,7 @@ import { useSelector } from 'react-redux';
 import { selectEmployeeAuthData } from '../../store/selectors';
 import { ChatService } from '../../api/chatService.ts/chatApi';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import ImageModal from '../../components/ImageModal';
 
 interface User {
   id: number | string;
@@ -24,6 +25,7 @@ interface User {
   skills?: string[];
   department?: string;
   joinDate?: string;
+  sortableTime?: string;
 }
 
 interface Attachment {
@@ -72,12 +74,15 @@ const determineMessageType = (text: string | undefined): 'text' | 'task' | 'urge
 const ChatWithMechanics: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newMessage, setNewMessage] = useState<string>('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Attachment[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'busy' | 'offline'>('all');
   const [filterRole, setFilterRole] = useState<'all' | 'mechanic' | 'admin'>('all');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageName, setSelectedImageName] = useState<string>("");
+  const [showImageModal, setShowImageModal] = useState<boolean>(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(1);
@@ -88,10 +93,13 @@ const ChatWithMechanics: React.FC = () => {
   const emojiPickerRef = useRef<HTMLDivElement>(null); // Ref for emoji picker
   const socketRef = useRef<Socket | null>(null);
   const { employeeData } = useSelector(selectEmployeeAuthData);
-  const userId = employeeData?.id;
-  const token = employeeData?.token;
+  const storedEmployeeData = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem('employeeData') || '{}')
+    : null;
+  const userId = employeeData?.id || storedEmployeeData?.id;
+  const token = employeeData?.token || storedEmployeeData?.token;
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -271,6 +279,26 @@ const ChatWithMechanics: React.FC = () => {
         }));
       }
 
+      // Update users list with new message
+      setUsers(prev => prev.map(user => {
+        const userConversationId = [userId, user.employeeId].sort().join('_');
+        if (userConversationId === conversationId) {
+          return {
+            ...user,
+            lastMessage: message.text || 'File attachment',
+            time: new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sortableTime: new Date(message.time).toISOString()
+          };
+        }
+        return user;
+      }).sort((a, b) => {
+        // Re-sort by time - most recent first
+        if (!a.sortableTime && !b.sortableTime) return 0;
+        if (!a.sortableTime) return 1;
+        if (!b.sortableTime) return -1;
+        return new Date(b.sortableTime).getTime() - new Date(a.sortableTime).getTime();
+      }));
+
       const formattedMessage = formatMessage({
         ...message,
         id: message.id || message.id,
@@ -397,7 +425,7 @@ const ChatWithMechanics: React.FC = () => {
         }, 100);
       });
 
-      setSelectedFiles((prev: any) => [...prev, ...newAttachments]);
+      setSelectedFiles((prev) => [...prev, ...newAttachments]);
     } catch (error) {
       console.error('Error handling files:', error);
     } finally {
@@ -433,6 +461,7 @@ const ChatWithMechanics: React.FC = () => {
       senderRole: 'coordinator',
       receiverRole: selectedUser.role.toLowerCase(),
       attachments: selectedFiles.length > 0 ? selectedFiles.map(file => ({
+        id: file.id,
         url: file.url,
         type: file.type,
         name: file.name,
@@ -475,7 +504,7 @@ const ChatWithMechanics: React.FC = () => {
       console.error('Error sending message:', error);
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       setNewMessage(tempMessage.text || '');
-      setSelectedFiles(selectedFiles);
+      setSelectedFiles([...selectedFiles]);
     }
   };
 
@@ -724,21 +753,31 @@ const ChatWithMechanics: React.FC = () => {
                               <img
                                 src={attachment.url}
                                 alt={attachment.name}
-                                className="max-w-full rounded-lg"
+                                className="max-w-full rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {
+                                  setSelectedImage(attachment.url);
+                                  setSelectedImageName(attachment.name);
+                                  setShowImageModal(true);
+                                }}
                               />
                             ) : (
                               <a
                                 href={attachment.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center space-x-2 text-sm text-indigo-500 hover:underline"
+                                className={`flex items-center space-x-2 text-sm hover:underline ${
+                                  message.senderId === userId
+                                    ? 'text-white'
+                                    : 'text-indigo-500'
+                                }`}
                               >
                                 <Paperclip size={14} />
                                 <span>{attachment.name}</span>
                                 <span>({Math.round(attachment.size / 1024)} KB)</span>
                               </a>
-                            )}
-                          </div>
+                            )
+                          }
+                        </div>
                         ))}
                       </div>
                     )}
@@ -921,6 +960,17 @@ const ChatWithMechanics: React.FC = () => {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+
+      <ImageModal
+        isOpen={showImageModal}
+        imageUrl={selectedImage || ""}
+        imageName={selectedImageName}
+        onClose={() => {
+          setShowImageModal(false);
+          setSelectedImage(null);
+          setSelectedImageName("");
+        }}
+      />
     </div>
   );
 };

@@ -40,18 +40,52 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   handleSubmit,
   resetForm,
 }) => {
-   // State for form errors
+  // State for form errors
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (submitSuccess) {
       const timer = setTimeout(() => {
         resetForm();
+        setTouched({});
+        setSubmitted(false);
       }, 2000); 
       
       return () => clearTimeout(timer);
     }
   }, [submitSuccess, resetForm]);
+
+  // Handle field blur to mark as touched
+  const handleBlur = (fieldName: string) => {
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+  };
+
+  // Wrapper for form submit
+  const onSubmit = (e: React.FormEvent) => {
+    setSubmitted(true);
+    setTouched({
+      emailId: true,
+      employeeName: true,
+      joinDate: true,
+      contactNumber: true,
+      address: true,
+      currentSalary: true,
+      age: true,
+      experience: true,
+      previousJob: true,
+      position: true,
+      fieldOfMechanic: true,
+      status: true,
+    });
+    handleSubmit(e);
+  };
+
+  // Helper to determine if error should be shown
+  const shouldShowError = (fieldName: string) => {
+    return (touched[fieldName as keyof typeof touched] || submitted) && !!errors[fieldName];
+  };
 
  useEffect(() => {
   const curErrors: { [key: string]: string } = {};
@@ -78,9 +112,11 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   if (!formData.joinDate) {
     curErrors.joinDate = "Join date is required.";
   } else {
-    const selectedDate = new Date(formData.joinDate);
+    // Parse YYYY-MM-DD as local date, not UTC
+    const [year, month, day] = formData.joinDate.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, day, 0, 0, 0, 0);
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
     if (selectedDate > today) {
       curErrors.joinDate = "Join date cannot be in the future.";
     }
@@ -149,7 +185,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const isFormValid = useMemo(() => Object.keys(errors).length === 0, [errors]);
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={onSubmit} noValidate>
       <div className="space-y-6">
         {submitSuccess && (
           <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-lg">
@@ -182,12 +218,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="emailId"
                   value={formData.emailId}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("emailId")}
                   required
-                  className={`w-full pl-10 pr-4 py-2 border ${errors.emailId ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                  className={`w-full pl-10 pr-4 py-2 border ${(touched.emailId || submitted) && errors.emailId ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                   placeholder="employee@company.com"
                 />
               </div>
-              {errors.emailId && (
+              {(touched.emailId || submitted) && errors.emailId && (
                 <span className="text-xs text-red-600">{errors.emailId}</span>
               )}
             </div>
@@ -202,11 +239,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 name="employeeName"
                 value={formData.employeeName}
                 onChange={handleInputChange}
+                onBlur={() => handleBlur("employeeName")}
                 required
-                className={`w-full px-4 py-2 border ${errors.employeeName ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                className={`w-full px-4 py-2 border ${shouldShowError("employeeName") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                 placeholder="John Doe"
               />
-              {errors.employeeName && (
+              {shouldShowError("employeeName") && (
                 <span className="text-xs text-red-600">{errors.employeeName}</span>
               )}
             </div>
@@ -223,11 +261,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="joinDate"
                   value={formData.joinDate}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("joinDate")}
                   required
-                  className={`w-full pl-10 pr-4 py-2 border ${errors.joinDate ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                  className={`w-full pl-10 pr-4 py-2 border ${shouldShowError("joinDate") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                 />
               </div>
-              {errors.joinDate && (
+              {shouldShowError("joinDate") && (
                 <span className="text-xs text-red-600">{errors.joinDate}</span>
               )}
             </div>
@@ -244,13 +283,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="contactNumber"
                   value={formData.contactNumber}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("contactNumber")}
                   required
                   maxLength={10}
-                  className={`w-full pl-10 pr-4 py-2 border ${errors.contactNumber ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                  className={`w-full pl-10 pr-4 py-2 border ${shouldShowError("contactNumber") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                   placeholder="9876543210"
                 />
               </div>
-              {errors.contactNumber && (
+              {shouldShowError("contactNumber") && (
                 <span className="text-xs text-red-600">{errors.contactNumber}</span>
               )}
             </div>
@@ -265,15 +305,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="position"
                   value={formData.position}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("position")}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className={`w-full px-3 py-2 border ${shouldShowError("position") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                 >
                   <option value="">Select a position</option>
                   <option value="mechanic">Mechanic</option>
                   <option value="coordinator">Coordinator</option>
                 </select>
               </div>
-              {errors.position && (
+              {shouldShowError("position") && (
                 <span className="text-xs text-red-600">{errors.position}</span>
               )}
             </div>
@@ -309,12 +350,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("address")}
                   required
-                  className={`w-full pl-10 pr-4 py-2 border ${errors.address ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                  className={`w-full pl-10 pr-4 py-2 border ${shouldShowError("address") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                   placeholder="123 Main St, City, Country"
                 />
               </div>
-               {errors.address && (
+               {shouldShowError("address") && (
                 <span className="text-xs text-red-600">{errors.address}</span>
               )}
             </div>
@@ -339,13 +381,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="currentSalary"
                   value={formData.currentSalary}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("currentSalary")}
                   required
                   min={0}
-                  className={`w-full pl-10 pr-4 py-2 border ${errors.currentSalary ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                  className={`w-full pl-10 pr-4 py-2 border ${shouldShowError("currentSalary") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                   placeholder="75000"
                 />
               </div>
-               {errors.currentSalary && (
+               {shouldShowError("currentSalary") && (
                 <span className="text-xs text-red-600">{errors.currentSalary}</span>
               )}
             </div>
@@ -362,13 +405,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="age"
                   value={formData.age}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("age")}
                   required
                   min={18}
-                  className={`w-full pl-10 pr-4 py-2 border ${errors.age ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
+                  className={`w-full pl-10 pr-4 py-2 border ${shouldShowError("age") ? "border-red-400" : "border-gray-300"} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                   placeholder="30"
                 />
               </div>
-                 {errors.age && (
+                 {shouldShowError("age") && (
                 <span className="text-xs text-red-600">{errors.age}</span>
               )}
             </div>
@@ -383,11 +427,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="previousJob"
                   value={formData.previousJob}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("previousJob")}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                   placeholder="Senior Mechanic at ABC Motors"
                 />
               </div>
-               {errors.previousJob && (
+               {shouldShowError("previousJob") && (
                 <span className="text-xs text-red-600">{errors.previousJob}</span>
               )}
             </div>
@@ -403,11 +448,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   name="experience"
                   value={formData.experience}
                   onChange={handleInputChange}
+                  onBlur={() => handleBlur("experience")}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                   placeholder="5"
                 />
               </div>
-               {errors.experience && (
+               {shouldShowError("experience") && (
                 <span className="text-xs text-red-600">{errors.experience}</span>
               )}
             </div>
@@ -460,6 +506,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                     }
                     handleInputChange("fieldOfMechanic", selectedValues);
                   }}
+                  onBlur={() => handleBlur("fieldOfMechanic")}
                   className="w-full pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none h-auto min-h-[42px]"
                   size={3}
                 >
@@ -474,7 +521,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
-               {errors.fieldOfMechanic && (
+               {shouldShowError("fieldOfMechanic") && (
                 <span className="text-xs text-red-600">{errors.fieldOfMechanic}</span>
               )}
             </div>

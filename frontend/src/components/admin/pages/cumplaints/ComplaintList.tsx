@@ -8,6 +8,7 @@ interface ComplaintListProps {
   currentItems: ComplaintResponse[];
   onView: (complaint: ComplaintResponse) => void;
   onDelete: (id: string) => void;
+  getStatusColor?: (status: string) => string;
 }
 
 const ComplaintList: React.FC<ComplaintListProps> = ({

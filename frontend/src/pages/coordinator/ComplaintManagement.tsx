@@ -182,8 +182,8 @@ const CoordinatorComplaintTable: React.FC = () => {
           (comp.customerName &&
             comp.customerName.toLowerCase().includes(term)) ||
           comp.customerEmail.toLowerCase().includes(term) ||
-          comp.contactNumber.includes(term) ||
-          comp.description.toLowerCase().includes(term)
+          (comp.contactNumber || '').includes(term) ||
+          (comp.description || '').toLowerCase().includes(term)
       );
     }
 
@@ -233,7 +233,8 @@ const CoordinatorComplaintTable: React.FC = () => {
 
       const complaintData = {
         customerEmail: formData.customerEmail,
-        contactNumber: formData.contactNumber,
+        contactNumber: formData.contactNumber ?? "",
+        customerPhone: formData.contactNumber ?? "",
         description: formData.description,
         assignedMechanicId: formData.assignedMechanicId,
         createdBy: employeeId ?? "",
@@ -278,7 +279,7 @@ const CoordinatorComplaintTable: React.FC = () => {
       return;
     }
 
-    if (!formData.contactNumber.trim()) {
+    if (!(formData.contactNumber ?? "").trim()) {
       setSubmitError("Contact number is required");
       return;
     }
@@ -747,7 +748,7 @@ const CoordinatorComplaintTable: React.FC = () => {
                     </td>
                     <td className="p-4">
                       <p className="text-sm text-gray-600">
-                        {new Date(complaint.createdAt).toLocaleDateString()}
+                        {complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : "N/A"}
                       </p>
                     </td>
                     <td className="p-4">

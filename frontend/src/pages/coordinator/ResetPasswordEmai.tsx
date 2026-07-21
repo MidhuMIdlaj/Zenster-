@@ -17,7 +17,7 @@ export default function PasswordResetPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
 
     if (!canResend && resendTime > 0) {
       timer = setTimeout(() => {

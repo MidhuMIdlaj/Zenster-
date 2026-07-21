@@ -18,8 +18,13 @@ import ComplaintStatistics from './complaintStatistics';
 import StatusChart from './StatusChart';
 import { selectEmployeeAuthData } from '../../store/selectors';
 import { setCurrentComplaintId } from '../../store/ComplaintSlice';
-import { Complaint, ComplaintFormData } from '../../types/complaint';
+import { ComplaintFormData } from '../../types/complaint';
 import MechanicInvoiceGenerator from '../../components/mechanicn/MechanicInvoiceGenerator';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { Calendar } from "lucide-react";
+import { format, isSameDay, isSameMonth } from "date-fns";
+
 
 const MechanicDashboard = () => {
   const [complaints, setComplaints] = useState<ComplaintFormData[]>([]);
@@ -30,10 +35,12 @@ const MechanicDashboard = () => {
   const { employeeData } = useSelector(selectEmployeeAuthData);
   const dispatch = useDispatch();
   const mechanicId = employeeData?.id || '';
-  
+  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [animateStats, setAnimateStats] = useState(false);
   const [animateCharts, setAnimateCharts] = useState(false);
-  
+
   useEffect(() => {
     const loadComplaints = async () => {
       try {
@@ -81,20 +88,52 @@ const MechanicDashboard = () => {
   // };
 
   useEffect(() => {
-    let filtered = complaints.filter(complaint => 
-      complaint.workingStatus !== 'reject'
-    );
+  let filtered = complaints.filter(
+    complaint => complaint.workingStatus !== "reject"
+  );
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(complaint => {
-        if (statusFilter === 'pending') return complaint.workingStatus === 'pending';
-        if (statusFilter === 'processing') return complaint.workingStatus === 'processing' || complaint.workingStatus === 'accept';
-        if (statusFilter === 'completed') return complaint.workingStatus === 'completed';
-        return true;
-      });
-    }
-    setFilteredComplaints(filtered);
-  }, [statusFilter, complaints]); 
+  if (statusFilter !== "all") {
+    filtered = filtered.filter(complaint => {
+      if (statusFilter === "pending")
+        return complaint.workingStatus === "pending";
+
+      if (statusFilter === "processing")
+        return (
+          complaint.workingStatus === "processing" ||
+          complaint.workingStatus === "accept"
+        );
+
+      if (statusFilter === "completed")
+        return complaint.workingStatus === "completed";
+
+      return true;
+    });
+  }
+
+  if (startDate && endDate) {
+  filtered = filtered.filter((complaint) => {
+    if (!complaint.createdAt) return false;
+
+    const complaintDate = new Date(complaint.createdAt);
+
+    return complaintDate >= startDate && complaintDate <= endDate;
+  });
+}
+
+  if (selectedMonth) {
+    filtered = filtered.filter(
+      complaint =>
+        complaint.createdAt &&
+        isSameMonth(new Date(complaint.createdAt), selectedMonth)
+    );
+  }
+
+  setFilteredComplaints(filtered);
+}, [  complaints,
+    statusFilter,
+    selectedMonth,
+    startDate,
+    endDate]);
   
   const stats = {
     pending: complaints.filter(c => c.workingStatus === 'pending').length,
@@ -141,6 +180,7 @@ const MechanicDashboard = () => {
     };
   };
 
+  
   // Trend data (mock for demonstration)
   const getTrendData = () => {
     return [
@@ -152,6 +192,22 @@ const MechanicDashboard = () => {
       { month: 'Jun', completed: 28, pending: 4 }
     ];
   };
+
+  const handleMonthChange = (date: Date | null) => {
+  setSelectedMonth(date);
+  // setSelectedDate(null);
+};
+
+const handleDateChange = (date: Date | null) => {
+  // setSelectedDate(date);
+  setSelectedMonth(null);
+};
+
+const clearFilters = () => {
+  setStartDate(null);
+  setEndDate(null);
+  setSelectedMonth(null);
+};
 
   const performanceMetrics = getPerformanceMetrics();
   const recentActivity = getRecentActivity();
@@ -318,14 +374,74 @@ const MechanicDashboard = () => {
   
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Mechanic Dashboard</h1>
-      <MechanicInvoiceGenerator 
-      mechanicData={employeeData} 
-      complaints={complaints}
-      selectedPeriod={statusFilter === 'all' ? 'All Time' : statusFilter}
+      <div className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+
+  <h1 className="text-2xl font-bold text-gray-800">
+    Mechanic Dashboard
+  </h1>
+
+  <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+
+    <div className="flex items-center gap-2">
+      <Calendar className="text-gray-500" />
+
+   <DatePicker
+      selected={selectedMonth}
+      onChange={handleMonthChange}
+      showMonthYearPicker
+      dateFormat="MMMM yyyy"
+      placeholderText="Filter by month"
+      maxDate={new Date()}
+      className="border rounded-md px-3 py-2 text-sm w-full"
     />
-      </div>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <Calendar className="text-gray-500" />
+
+     
+      <DatePicker
+        selectsRange
+        startDate={startDate}
+        endDate={endDate}
+        onChange={(dates) => {
+          const [start, end] = dates;
+          setStartDate(start);
+          setEndDate(end);
+          setSelectedMonth(null); // Clear month filter
+        }}
+        maxDate={new Date()}
+        dateFormat="MMMM d, yyyy"
+        placeholderText="Select date range"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        isClearable
+      />
+    </div>
+
+    {(startDate || endDate || selectedMonth) && (
+      <button
+        onClick={clearFilters}
+        className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-md"
+      >
+        Clear Filters
+      </button>
+    )}
+
+    <MechanicInvoiceGenerator
+      mechanicData={employeeData}
+      complaints={filteredComplaints}
+      selectedPeriod={
+       startDate && endDate
+      ? `${format(startDate,"MMM d, yyyy")} - ${format(endDate,"MMM d, yyyy")}`
+      : selectedMonth
+          ? format(selectedMonth,"MMMM yyyy")
+          : "All Time"
+      }
+    />
+
+  </div>
+
+</div>
       
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

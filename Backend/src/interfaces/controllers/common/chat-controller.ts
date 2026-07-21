@@ -10,6 +10,9 @@ import { IGetConversationsUseCase } from '../../../Application/interface/chat/ge
 import { IGetChatHistoryUseCase } from '../../../Application/interface/chat/get-history-usecase-interface';
 import { IMarkMessagesAsReadUseCase } from '../../../Application/interface/chat/mark-message-as-read-usecase-interface';
 import { ISaveMessageUseCase } from '../../../Application/interface/chat/save-message-usecase-interface';
+import { NotificationRepository } from '../../../infrastructure/Services/notification-service';
+import EmployeeModel from '../../../infrastructure/db/models/employee.model';
+import { AdminModel } from '../../../infrastructure/db/models/Admin/admin.model';
 
 
 @injectable()
@@ -93,6 +96,27 @@ export class ChatController {
 
       const io = getSocketInstance();
       io.to(`user_${receiverId}`).emit('new_message', savedMessage);
+
+      // Fetch sender's name from database
+      let senderName = 'Unknown';
+      if (senderRole === 'admin') {
+        const admin = await AdminModel.findById(senderId);
+        senderName = admin ? `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'Admin' : 'Admin';
+      } else {
+        const employee = await EmployeeModel.findById(senderId);
+        senderName = employee?.employeeName || 'Employee';
+      }
+
+      const notificationRepo = new NotificationRepository();
+      await notificationRepo.createChatNotification(
+        receiverId,
+        senderId,
+        senderName,
+        text || (attachments.length > 0 ? 'File attachment' : ''),
+        conversationId,
+        receiverRole,
+        senderRole
+      );
 
       res.status(StatusCode.CREATED).json(savedMessage);
     } catch (err) {

@@ -34,6 +34,9 @@ export interface CompletionDetails {
   photos: string[];
   completedAt: Date | string;
   completedBy: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  amount?: number;
 }
 
 export interface VehicleDetails {
@@ -228,7 +231,7 @@ const handleTaskAction = async (taskId: string, action: TaskAction) => {
   }
 };
 
-const handleTaskCompletion = async (completionData: { description: string; photos: File[];  amount: number, paymentStatus : string, paymentMothod ?: string | null,   }) => {
+const handleTaskCompletion = async (completionData: { description: string; photos: File[];  amount: number, paymentStatus : string, paymentMothod ?: string | null, isUnderWarranty?: boolean }) => {
   if (!taskToComplete || !employeeData?.id) return;
   try {
     setActionLoading(taskToComplete.id);
@@ -249,6 +252,7 @@ const handleTaskCompletion = async (completionData: { description: string; photo
       completionData.paymentMothod  ?? '',
       completionData.amount,
       completionData.photos,
+      Boolean(completionData.isUnderWarranty),
     );
     setTasks(prevTasks => 
       prevTasks.map(task => 
@@ -985,6 +989,7 @@ const handleTaskCompletion = async (completionData: { description: string; photo
     onSubmit={handleTaskCompletion}
     taskTitle={taskToComplete.title}
     customerName={taskToComplete.customerName}
+    isUnderWarranty={Boolean(taskToComplete.warrantyDate && new Date(taskToComplete.warrantyDate) >= new Date())}
     isLoading={actionLoading === taskToComplete.id}
   />
 )}

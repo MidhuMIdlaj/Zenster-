@@ -24,7 +24,7 @@ export default class EmployeeController {
     @inject(TYPES.getEmployeeProfileUsecases) private getEmployeeProfileUsecases : IGetEmployeeProfileUseCase,
   ){}
 
-  addEmployee = async (req: Request, res: Response, next: NextFunction) => {
+  addEmployee = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const  {
         employeeName,
@@ -51,7 +51,7 @@ export default class EmployeeController {
         mechanicFields = [];
       }
 
-      const newEmployee = await this.addEmployeeUseCase.execute({
+      const result = await this.addEmployeeUseCase.execute({
         employeeName,
         emailId,
         joinDate: parsedJoinDate,
@@ -65,10 +65,18 @@ export default class EmployeeController {
         experience: parsedExperience
       });
 
+       if (result.success) {
       res.status(StatusCode.CREATED).json({
-        message: "Employee created successfully",
-        employee: newEmployee,
+        message: result.message,
+        employee: result.data,
       });
+    } else {
+      res.status(result.statusCode).json({
+        message: result.message,
+        employee: null,
+      });
+    }
+    return;
     } catch (err: unknown) {
       next(err);
     }
@@ -90,7 +98,8 @@ export default class EmployeeController {
     res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
       success: false,
       message,
-      data: null
+      data: null,
+      statusCode: StatusCode.INTERNAL_SERVER_ERROR
     } satisfies ResponseDTO); 
   }
 };

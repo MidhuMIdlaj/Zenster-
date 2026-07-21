@@ -1,31 +1,87 @@
 import React from 'react';
-import { User, Mail, Phone, Clock, Tag, CheckCircle, X, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { User, Mail, Phone, Clock, CheckCircle, X, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ComplaintFormData, coordinator, Mechanic } from '../../../../types/complaint';
 import { StatusType } from '../../../../api/cplaint/complaint';
-import { EmployeeAPI } from '../../../../api/employee/employee';
 
 interface ComplaintDetailsProps {
   complaint: ComplaintFormData;
   mechanics: Mechanic[];
   coordinator: coordinator[];
   onClose: () => void;
+  onEdit?: () => void;
 }
 
 type PriorityType = 'low' | 'medium' | 'high';
 
+type AssignedMechanicDisplay = {
+  mechanicId: string;
+  status: string;
+  reason?: string | null;
+  mechanicDetails?: Mechanic | null;
+  mechanicName?: string;
+};
 
+const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanics, coordinator: _coordinator, onClose }) => {
+  const getMechanicIdValue = (value: unknown): string | null => {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      const candidate = value as Record<string, unknown>;
+      return (
+        (candidate._id as string | undefined) ||
+        (candidate.id as string | undefined) ||
+        (candidate.mechanicId as string | undefined) ||
+        null
+      );
+    }
+    return null;
+  };
 
+  const getAssignedMechanics = (): AssignedMechanicDisplay[] => {
+    if (!complaint.assignedMechanicId) return [];
 
+    if (typeof complaint.assignedMechanicId === 'string') {
+      return [
+        {
+          mechanicId: complaint.assignedMechanicId,
+          status: 'assigned',
+          reason: null,
+          mechanicDetails: mechanics.find((mechanic) => {
+            const mechanicId = getMechanicIdValue((mechanic as unknown as Record<string, unknown>).mechanicId || (mechanic as unknown as Record<string, unknown>).id);
+            return mechanicId === complaint.assignedMechanicId;
+          })
+        }
+      ];
+    }
 
-const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanics, coordinator, onClose }) => {
-  const assignedMechanics = Array.isArray(complaint.assignedMechanicId)
-    ? complaint.assignedMechanicId.map(assignment => {
-        const mechanic = mechanics.find(m => String(m.mechanicId) === String(assignment.mechanicId));
-        return { ...assignment, mechanicDetails: mechanic };
-      })
-    : [];
-    
+    if (Array.isArray(complaint.assignedMechanicId)) {
+      return complaint.assignedMechanicId.map((assignment) => {
+        const rawMechanicId = getMechanicIdValue(assignment?.mechanicId);
+        const mechanic = mechanics.find((item) => {
+          const candidateIds = [
+            getMechanicIdValue((item as unknown as Record<string, unknown>).mechanicId),
+            getMechanicIdValue((item as unknown as Record<string, unknown>).id),
+            getMechanicIdValue((item as unknown as Record<string, unknown>)._id),
+          ];
+          return candidateIds.some((id) => id && id === rawMechanicId);
+        });
+
+        return {
+          mechanicId: rawMechanicId || assignment.mechanicId || '',
+          status: assignment.status || 'assigned',
+          reason: assignment.reason ?? null,
+          mechanicDetails: mechanic || null,
+          mechanicName: mechanic?.name || 'Unknown'
+        } satisfies AssignedMechanicDisplay;
+      });
+    }
+
+    return [];
+  };
+
+  const assignedMechanics = getAssignedMechanics();
+
   const formatDate = (date?: string | Date) => {
     if (!date) return 'N/A';
     const parsedDate = typeof date === 'string' ? new Date(date) : date;
@@ -89,7 +145,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
             </div>
             <div className="flex items-center">
               <Phone className="text-blue-500 mr-2" />
-              <p className="text-gray-900">{complaint.customerPhone}</p>
+              <p className="text-gray-900">{complaint.customerPhone || complaint.contactNumber || 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -164,7 +220,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
             {assignedMechanics.map((assignment, idx) => (
               <li key={idx} className="p-3 border rounded-lg flex justify-between items-center">
                 <div>
-                  <p className="font-semibold">{assignment.mechanicDetails?.name || 'Unknown'}</p>
+                  <p className="font-semibold">{assignment.mechanicName || assignment.mechanicDetails?.name || 'Unknown'}</p>
                   <p className="text-gray-600 text-sm">Status: {assignment.status}</p>
                 </div>
                 {assignment.reason && <p className="text-red-500 text-sm">{assignment.reason}</p>}

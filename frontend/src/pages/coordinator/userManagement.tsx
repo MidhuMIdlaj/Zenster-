@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Edit2,
   Trash2,
@@ -63,6 +63,8 @@ export interface User {
 }
 
 interface Product {
+  id?: string;
+  _id?: string;
   productName: string;
   quantity: string;
   brand: string;
@@ -70,6 +72,40 @@ interface Product {
   warrantyDate: string;
   guaranteeDate: string;
 }
+
+const getPrimaryProduct = (client: any): Product | undefined => {
+  return Array.isArray(client.products) && client.products.length > 0
+    ? client.products[0]
+    : undefined;
+};
+
+const mapClientToUser = (client: any): User => {
+  const primaryProduct = getPrimaryProduct(client);
+  const address = client.address || "";
+
+  return {
+    id: client.id || client._id,
+    name: client.clientName,
+    email: client.email,
+    phone: client.contactNumber,
+    place: address.split(',')[0]?.trim() || 'N/A',
+    district: address.split(',')[1]?.trim() || 'N/A',
+    status: client.status as "active" | "inactive",
+    attendanceData: client.attendedDate,
+    address,
+    role: client.role || "Customer",
+    complaints: client.complaints || 0,
+    orders: client.orders || 0,
+    products: client.products || [],
+    productName: primaryProduct?.productName || client.productName || "",
+    quantity: primaryProduct?.quantity || client.quantity || "",
+    brand: primaryProduct?.brand || client.brand || "",
+    model: primaryProduct?.model || client.model || "",
+    warrantyDate: primaryProduct?.warrantyDate || client.warrantyDate || "",
+    guaranteeDate: primaryProduct?.guaranteeDate || client.guaranteeDate || "",
+    lastLogin: client.lastLogin || "Never"
+  };
+};
 
 interface FormData {
   id: string;
@@ -87,6 +123,7 @@ interface FormData {
 const UserTable: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -121,40 +158,22 @@ const UserTable: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [roleFilter, setRoleFilter] = useState<"all" | string>("all");
   const [showRoleFilter, setShowRoleFilter] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 6;
   const [totalPages, setTotalPages] = useState(0);
+  const MIN_SEARCH_CHARS = 5;
+  const hasInitialized = useRef(false);
+  const isFirstSearchRun = useRef(true);
 
-  const fetchUsers = async (page: number = currentPage) => {
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchUsers = useCallback(async (page: number) => {
     try {
       setIsRefreshing(true);
       setLoading(true);
 
       const response = await ClientListApi(page, itemsPerPage);
       if (response && response.success) {
-        const mappedClients = response.clients
-          .map((client: any) => ({
-            id: client.id || client._id,
-            name: client.clientName,
-            email: client.email,
-            phone: client.contactNumber,
-            place: client.address?.split(',')[0]?.trim() || 'N/A',
-            district: client.address?.split(',')[1]?.trim() || 'N/A',
-            status: client.status as "active" | "inactive",
-            avatar: client.clientName?.charAt(0) || 'U',
-            attendanceData: client.attendedDate,
-            role: client.role || "Customer",
-            complaints: client.complaints || 0,
-            orders: client.orders || 0,
-            productName: client.productName || "",
-            quantity: client.quantity || "",
-            brand: client.brand || "",
-            model: client.model || "",
-            warrantyDate: client.warrantyDate || "",
-            guaranteeDate: client.guaranteeDate || "",
-            lastLogin: client.lastLogin || "Never"
-          }));
+        const mappedClients = response.clients.map(mapClientToUser);
 
         setUsers(mappedClients);
         setTotalItems(response.total);
@@ -167,64 +186,63 @@ const UserTable: React.FC = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [itemsPerPage]);
 
-  const MIN_SEARCH_CHARS = 5;
-  const searchUser = async () => {
-    if (searchTerm.length > 0 && searchTerm.length < MIN_SEARCH_CHARS) {
+  // Memoized search function - takes explicit parameters to avoid closure issues
+  const searchUserFn = useCallback(
+    async (term: string, status: "all" | "active" | "inactive") => {
+      if (term.length > 0 && term.length < MIN_SEARCH_CHARS) {
+        return;
+      }
+      try {
+        setIsRefreshing(true);
+        setLoading(true);
+        const response = await searchClientsApi(
+          term,
+          status,
+          1, // Always search from page 1
+          itemsPerPage
+        );
+
+        if (response && response.success) {
+          const mappedClients = response.clients.map(mapClientToUser);
+
+          setUsers(mappedClients);
+          setTotalItems(response.total);
+          setTotalPages(response.totalPages);
+          setCurrentPage(1); // Reset to page 1 when searching
+        }
+      } catch (error) {
+        console.error("Failed to search clients:", error);
+        toast.error("Failed to search users");
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [itemsPerPage]
+  );
+
+  // Load initial data on component mount (only once)
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchUsers(1);
+    }
+  }, []); // Runs once on mount
+
+  // Handle search/filter changes with debounce - but only AFTER mount
+  useEffect(() => {
+    // Skip the first run on mount
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false;
       return;
     }
-    try {
-      setIsRefreshing(true);
-      setLoading(true);
-      const response = await searchClientsApi(
-        searchTerm,
-        statusFilter,
-        currentPage,
-        itemsPerPage
-      );
 
-      if (response && response.success) {
-        const mappedClients = response.clients.map((client: any) => ({
-          id: client._id || client.id,
-          name: client.clientName,
-          email: client.email,
-          phone: client.contactNumber,
-          place: client.address?.split(',')[0]?.trim() || 'N/A',
-          district: client.address?.split(',')[1]?.trim() || 'N/A',
-          status: client.status as "active" | "inactive",
-          avatar: client.clientName?.charAt(0) || 'U',
-          attendanceData: client.attendedDate,
-          role: client.role || "Customer",
-          complaints: client.complaints || 0,
-          orders: client.orders || 0,
-          productName: client.productName || "",
-          quantity: client.quantity || "",
-          brand: client.brand || "",
-          model: client.model || "",
-          warrantyDate: client.warrantyDate || "",
-          guaranteeDate: client.guaranteeDate || "",
-          lastLogin: client.lastLogin || "Never"
-        }));
-
-        setUsers(mappedClients);
-        setTotalItems(response.total);
-        setTotalPages(response.totalPages);
-        setCurrentPage(response.currentPage);
-      }
-    } catch (error) {
-      console.error("Failed to search clients:", error);
-      toast.error("Failed to search users");
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
     const debounceTimer = setTimeout(() => {
       if (searchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all' || roleFilter !== 'all') {
-        searchUser();
+        setCurrentPage(1);
+        searchUserFn(searchTerm, statusFilter);
       } else if (searchTerm.length === 0 && statusFilter === 'all' && roleFilter === 'all') {
         fetchUsers(1);
       }
@@ -232,9 +250,14 @@ const UserTable: React.FC = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchTerm, statusFilter, roleFilter]);
 
+  // Handle page changes separately
   useEffect(() => {
+    if (currentPage === 1) {
+      return;
+    }
+
     if (searchTerm.length >= MIN_SEARCH_CHARS || statusFilter !== 'all' || roleFilter !== 'all') {
-      searchUser();
+      searchUserFn(searchTerm, statusFilter);
     } else {
       fetchUsers(currentPage);
     }
@@ -250,11 +273,7 @@ const UserTable: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    if (searchTerm || statusFilter !== 'all' || roleFilter !== 'all') {
-      searchUser();
-    } else {
-      fetchUsers(page);
-    }
+    // Page change will trigger the useEffect that handles fetching
   };
 
   // Handle status toggle
@@ -342,16 +361,21 @@ const UserTable: React.FC = () => {
       const clientDetails = await getClientById(user.id);
 
       if (clientDetails) {
+        const products = clientDetails.products?.length ? clientDetails.products : user.products;
         setFormData({
-          id: user.id,
-          email: user.email,
-          ClientName: user.name,
-          attendedDate: formatDateForInput(user.attendanceData),
-          contactNumber: user.phone,
-          address: `${user.place}, ${user.district}`,
-          status: user.status,
+          id: clientDetails.id || clientDetails._id || user.id,
+          email: clientDetails.email || user.email,
+          ClientName: clientDetails.clientName || user.name,
+          attendedDate: formatDateForInput(clientDetails.attendedDate || user.attendanceData),
+          contactNumber: clientDetails.contactNumber || user.phone,
+          address: clientDetails.address || user.address || `${user.place}, ${user.district}`,
+          status: clientDetails.status || user.status,
           role: user.role,
-          products: clientDetails.products?.length ? clientDetails.products : [{
+          products: products?.length ? products.map((product: Product) => ({
+            ...product,
+            warrantyDate: formatDateForInput(product.warrantyDate),
+            guaranteeDate: formatDateForInput(product.guaranteeDate)
+          })) : [{
             productName: user.productName || "",
             quantity: user.quantity || "",
             brand: user.brand || "",
@@ -397,7 +421,7 @@ const UserTable: React.FC = () => {
       }
 
       if (searchTerm || statusFilter !== 'all' || roleFilter !== 'all') {
-        await searchUser();
+        await searchUserFn(searchTerm, statusFilter);
       } else {
         await fetchUsers(currentPage);
       }
@@ -424,10 +448,11 @@ const UserTable: React.FC = () => {
       setShowDeleteConfirm(false);
       setSelectedUser(null);
 
+      // Refresh the list based on current search/filter state
       if (searchTerm || statusFilter !== 'all' || roleFilter !== 'all') {
-        await searchUser();
+        await searchUserFn(searchTerm, statusFilter);
       } else {
-        await fetchUsers();
+        await fetchUsers(currentPage);
       }
     } catch (error) {
       console.error("Soft delete failed:", error);
@@ -554,9 +579,9 @@ const UserTable: React.FC = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => {
                 if (searchTerm || statusFilter !== 'all' || roleFilter !== 'all') {
-                  searchUser();
+                  searchUserFn(searchTerm, statusFilter);
                 } else {
-                  fetchUsers();
+                  fetchUsers(currentPage);
                 }
               }}
               className={`flex items-center gap-2 p-2 rounded-full ${isRefreshing ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100'}`}
@@ -977,4 +1002,4 @@ const UserTable: React.FC = () => {
   )
 };
 
-export default UserTable;
+export default React.memo(UserTable);

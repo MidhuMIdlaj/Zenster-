@@ -174,7 +174,6 @@ const NotificationModal: React.FC<NotificationPanelProps> = ({
                               </p>
                             )}
                           </div>
-                          <span className="w-2 h-2 bg-blue-600 rounded-full mt-1.5"></span>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
                           {formatTimestamp(notification.createdAt)}

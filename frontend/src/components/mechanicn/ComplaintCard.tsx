@@ -26,9 +26,11 @@ const ComplaintCard: React.FC<ComplaintCardProps> = ({
   const statusColors = {
     pending: 'text-amber-600',
     accept: 'text-blue-600',
+    accepted: 'text-blue-600',
     processing: 'text-blue-600',
     completed: 'text-green-600',
-    reject: 'text-red-600'
+    reject: 'text-red-600',
+    rejected: 'text-red-600'
   };
 
   const handleAccept = () => {
