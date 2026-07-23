@@ -1,10 +1,10 @@
 import axios, { AxiosResponse } from "axios";
 import {  ResetPasswordEmailFormData } from "../../types/dashboard";
 import  {responseData}  from "../../types/dashboard";
+import { configManager } from '../../config/config';
 
 
-const BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/employee`;
-;
+const BASE_URL = configManager.getApiEndpoint('/employee');
 
 export const EmployeeLoginApi = async (
     email: string,

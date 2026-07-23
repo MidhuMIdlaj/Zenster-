@@ -1,11 +1,10 @@
 // infrastructure/services/NotificationService.ts
 
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
 import { injectable } from 'inversify';
 import { IEmailService } from '../../domain/Repository/i-email-repository';
 import { videoCallInvitationEmail } from '../../service/email-service';
-dotenv.config();
+import { config } from '../../config';
 
 @injectable()
 export class EmailService implements IEmailService {
@@ -14,28 +13,24 @@ export class EmailService implements IEmailService {
   private initPromise: Promise<void> | null = null;
 
   constructor() {
-    this.emailService = this.getEmailService();
+    this.emailService = config.emailService;
     this.initPromise = this.initializeTransporter();
   }
 
-  private getEmailService(): string {
-    return (process.env.EMAIL_SERVICE || 'gmail').trim().toLowerCase();
-  }
-
   private getResendApiKey(): string {
-    return (process.env.RESEND_API_KEY || process.env.EMAIL_PASS || '').trim();
+    return (config.resendApiKey || config.emailPass || '').trim();
   }
 
   private getResendFrom(): string {
-    return (process.env.RESEND_FROM || 'onboarding@resend.dev').trim();
+    return config.resendFrom.trim();
   }
 
   private isEmailEnabled(): boolean {
-    return process.env.ENABLE_EMAIL === 'true';
+    return config.emailEnabled;
   }
 
   private async refreshProviderIfChanged(): Promise<void> {
-    const currentService = this.getEmailService();
+    const currentService = config.emailService;
     if (currentService !== this.emailService) {
       this.emailService = currentService;
       this.transporter = null;
@@ -70,8 +65,8 @@ export class EmailService implements IEmailService {
         host: 'live.smtp.mailtrap.io',
         port: 587,
         auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+          user: config.emailUser,
+          pass: config.emailPass,
         },
       });
       console.log('[MAILTRAP] Using Mailtrap email service');
@@ -85,8 +80,8 @@ export class EmailService implements IEmailService {
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: config.emailUser,
+        pass: config.emailPass,
       },
     });
   }
@@ -143,14 +138,11 @@ export class EmailService implements IEmailService {
         return;
       }
 
-      const gmailUser = (process.env.EMAIL_USER || '').trim();
-      const gmailPass = (process.env.EMAIL_PASS || '').trim();
-
-      if (gmailUser && gmailPass) {
+      if (config.emailUser && config.emailPass) {
         console.warn('[EMAIL] RESEND_API_KEY is missing/placeholder. Falling back to Gmail transport.');
         const gmailTransporter = this.createGmailTransporter();
         await gmailTransporter.sendMail({
-          from: `"Complaint Management System" <${gmailUser}>`,
+          from: `"Complaint Management System" <${config.emailUser}>`,
           to,
           subject,
           html,
@@ -170,7 +162,7 @@ export class EmailService implements IEmailService {
     }
 
     const result = await this.transporter.sendMail({
-      from: `"Complaint Management System" <${this.emailService === 'ethereal' ? 'test@ethereal.email' : (process.env.EMAIL_USER || 'noreply@zenster.com')}>`,
+      from: `"Complaint Management System" <${this.emailService === 'ethereal' ? 'test@ethereal.email' : (config.emailUser || 'noreply@zenster.com')}>`,
       to,
       subject,
       html,
@@ -255,8 +247,8 @@ export class EmailService implements IEmailService {
     const smsTransporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        user: config.emailUser,
+        pass: config.emailPass
       }
     });
 
@@ -269,7 +261,7 @@ export class EmailService implements IEmailService {
     for (const gateway of gateways) {
       try {
         await smsTransporter.sendMail({
-          from: `"Complaint System" <${process.env.EMAIL_USER}>`,
+          from: `"Complaint System" <${config.emailUser}>`,
           to: `${cleanNumber}${gateway}`,
           text: message.substring(0, 160),
           subject: ''

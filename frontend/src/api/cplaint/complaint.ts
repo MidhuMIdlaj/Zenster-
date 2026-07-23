@@ -1,5 +1,6 @@
 import { Complaint, ComplaintFormData, Mechanic, RejectReason, WorkProof } from "../../types/complaint";
 import axiosInstance from "../axiosInstance";
+import { configManager } from '../../config/config';
 export type ComplaintPriority = 'low' | 'medium' | 'high';
 export type ComplaintStatusType = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -17,8 +18,7 @@ export interface StatusType {
 }
 
 
-const API_URL =  `${import.meta.env.VITE_API_BASE_URL}/common`;
-;
+const API_URL = configManager.getApiEndpoint('/common');
 
 export const findEmailForInitialCreation = async (email: string) => {
   try {

@@ -1,6 +1,7 @@
 import axios from "axios";
 import axiosInstance from "../axiosInstance";
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/admin`;
+import { configManager } from '../../config/config';
+const API_BASE_URL = configManager.getApiEndpoint('/admin');
 
 export interface EmployeeFormData {
   id?: string;

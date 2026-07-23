@@ -2,9 +2,10 @@ import axios from 'axios';
 import { store } from '../store/Store';
 import { clearAdminAuth } from '../store/AdminAuthSlice';
 import { clearEmployeeAuth } from '../store/EmployeeAuthSlice';
+import { configManager } from '../config/config';
 
 const axiosInstance = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}`,
+  baseURL: configManager.getApiBaseUrl(),
   withCredentials: true,
 });
 
@@ -30,7 +31,7 @@ axiosInstance.interceptors.response.use(
       
       try {
         const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/admin/refresh-token`,
+          `${configManager.getApiBaseUrl()}/admin/refresh-token`,
           {},
           { withCredentials: true }
         ); 

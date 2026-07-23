@@ -1,6 +1,5 @@
 // app.ts
 import express from 'express';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import morgan from 'morgan';
 import { Server, Socket } from 'socket.io';
@@ -26,19 +25,19 @@ import path from 'path';
 import { NotificationRepository } from './infrastructure/Services/notification-service';
 import EmployeeModel from './infrastructure/db/models/employee.model';
 import { AdminModel } from './infrastructure/db/models/Admin/admin.model';
+import { config } from './config';
 
-dotenv.config();
 const app = express();
 export let ioInstance: Server | undefined;
 
 // Middleware
 app.use(express.json());
 app.use(morgan('dev'));
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({ origin: config.clientUrl, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: config.sessionSecret,
   resave: false,
   saveUninitialized: true,
 }));
@@ -61,8 +60,8 @@ export const getSocketInstance = (): Server => {
 export const setupSocket = (httpServer: HttpServer) => {
 
   const allowedOrigins = [
-    process.env.CLIENT_URL || 'https://szenster.store',
-    'http://localhost:5000'
+    config.clientUrl,
+    `http://localhost:${config.port}`
   ].filter(Boolean);
 
   const io = new Server(httpServer, {
@@ -82,13 +81,8 @@ export const setupSocket = (httpServer: HttpServer) => {
     if (!token) {
       return next(new Error('Authentication error: token required'));
     }
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('[app.ts] JWT_SECRET is not defined');
-      return next(new Error('Server configuration error'));
-    }
     try {
-      const decoded = jwt.verify(token, jwtSecret, { ignoreExpiration: true }) as { userId?: string; id?: string; email?: string; role?: string };
+      const decoded = jwt.verify(token, config.jwtSecret, { ignoreExpiration: true }) as { userId?: string; id?: string; email?: string; role?: string };
       const userId = decoded.userId || decoded.id;
       if (!userId) {
         return next(new Error('Authentication error: invalid token payload'));
@@ -222,7 +216,7 @@ export const setupSocket = (httpServer: HttpServer) => {
 };
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI!)
+mongoose.connect(config.mongoUri)
   .then(() => console.log('[app.ts] DB connected'))
   .catch(err => console.error('[app.ts] MongoDB connection error:', err));
 

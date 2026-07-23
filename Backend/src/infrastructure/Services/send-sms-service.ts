@@ -1,26 +1,26 @@
 // services/smsService.ts
 import axios from 'axios';
+import { config } from '../../config';
 
-// Configuration - add these to your environment variables
 const SMS_CONFIG = {
   // For Twilio
-  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
+  TWILIO_ACCOUNT_SID: config.twilioAccountSid,
+  TWILIO_AUTH_TOKEN: config.twilioAuthToken,
+  TWILIO_PHONE_NUMBER: config.twilioPhoneNumber,
   
   // For AWS SNS
-  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-  AWS_REGION: process.env.AWS_REGION,
+  AWS_ACCESS_KEY_ID: config.awsAccessKeyId,
+  AWS_SECRET_ACCESS_KEY: config.awsSecretAccessKey,
+  AWS_REGION: config.awsRegion,
   
   // For MSG91 (Indian SMS service)
-  MSG91_AUTH_KEY: process.env.MSG91_AUTH_KEY,
-  MSG91_SENDER_ID: process.env.MSG91_SENDER_ID,
-  MSG91_ROUTE: process.env.MSG91_ROUTE || '4',
+  MSG91_AUTH_KEY: config.msg91AuthKey,
+  MSG91_SENDER_ID: config.msg91SenderId,
+  MSG91_ROUTE: config.msg91Route,
   
   // For TextLocal (UK/India)
-  TEXTLOCAL_API_KEY: process.env.TEXTLOCAL_API_KEY,
-  TEXTLOCAL_SENDER: process.env.TEXTLOCAL_SENDER
+  TEXTLOCAL_API_KEY: config.textlocalApiKey,
+  TEXTLOCAL_SENDER: config.textlocalSender
 };
 
 // SMS Provider Interface

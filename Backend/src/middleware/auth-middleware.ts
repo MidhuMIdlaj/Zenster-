@@ -4,8 +4,7 @@ import jwt from "jsonwebtoken";
 import Employee from '../infrastructure/db/models/employee.model'
 import { StatusCode } from "../shared/enums/statusCode";
 import { RequestHandler } from 'express';
-import dotenv from 'dotenv';
-dotenv.config();
+import { config } from '../config';
 
 declare global {
   namespace Express {
@@ -23,16 +22,15 @@ interface TokenPayload {
   exp?: number;
 }
 
-const SECRET_KEY = process.env.JWT_SECRET || 'default_secret_key';
 export const generateAccessToken = (payload: TokenPayload): string => {
-  return jwt.sign(payload, SECRET_KEY, {
+  return jwt.sign(payload, config.jwtSecret, {
     expiresIn: "24h",
   });
 };
 
 // Generate Refresh Token
 export const generateRefreshToken = (payload: TokenPayload): string => {
-  return jwt.sign(payload, SECRET_KEY, {
+  return jwt.sign(payload, config.refreshTokenSecret, {
     expiresIn: "7d",
   });
 };
@@ -51,7 +49,7 @@ export const verifyTokenMiddleware = (
 
   jwt.verify(
     token,
-    SECRET_KEY,
+    config.jwtSecret,
     (err: jwt.VerifyErrors | null, decoded: unknown) => {
       if (err) {
         console.error("JWT verification error:", err);
@@ -87,16 +85,16 @@ export const verifyToken = async  (req: Request, res: Response, next: NextFuncti
        res.status(StatusCode.UNAUTHORIZED).json({ success: false, error: 'Authorization token required' });
       return;
     }
-    jwt.verify(token, SECRET_KEY, async (err, decoded) => {
+    jwt.verify(token, config.jwtSecret, async (err: jwt.VerifyErrors | null, decoded: unknown) => {
       if (err) {
-        console.error('JWT verification error:', err.name, err.message);
+        console.error('JWT verification error:', (err as jwt.VerifyErrors).name, (err as jwt.VerifyErrors).message);
         req.session.token = undefined;
         res.clearCookie('accessToken', {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: config.nodeEnv === 'production',
           sameSite: 'strict',
         });
-        const errorMessage = err.name === 'TokenExpiredError' 
+        const errorMessage = (err as jwt.VerifyErrors).name === 'TokenExpiredError' 
           ? 'Token expired. Please login again.' 
           : 'Invalid token. Please authenticate.';
          res.status(StatusCode.UNAUTHORIZED).json({ success: false, error: errorMessage, shouldLogout: true });
@@ -126,12 +124,12 @@ export const verifyToken = async  (req: Request, res: Response, next: NextFuncti
         if (payload.exp && Date.now() >= payload.exp * 1000 - 300000) {
           const newToken = jwt.sign(
             { userId: payload.userId, role: payload.role, email: payload.email },
-            SECRET_KEY,
+            config.jwtSecret,
             { expiresIn: '1h' }
           );
           res.cookie('accessToken', newToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: config.nodeEnv === 'production',
             sameSite: 'strict',
             maxAge: 3600000,
           });

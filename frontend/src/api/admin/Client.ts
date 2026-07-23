@@ -1,7 +1,8 @@
 // src/api/clientApi.ts
 import axiosInstance from "../axiosInstance";
+import { configManager } from '../../config/config';
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/admin`;
+const API_BASE_URL = configManager.getApiEndpoint('/admin');
 
 
 export const ClientApi = async (data: any): Promise<any> => {

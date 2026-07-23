@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 // import createAxiosInstance from "../axiosInstance";
 import { Admin } from "../../types/dashboard";
+import { configManager } from '../../config/config';
 
 interface ForgotPasswordFormData {
   email: string;
@@ -20,7 +21,7 @@ export interface AdminResponse {
   };
 }
 
-const API_BASE_UR = `${import.meta.env.VITE_API_BASE_URL}/admin`;
+const API_BASE_URL = configManager.getApiEndpoint('/admin');
 
 
 export const AdminLoginApi = async (
@@ -29,7 +30,7 @@ export const AdminLoginApi = async (
   ): Promise<AxiosResponse<AdminResponse>> => {
     try {
       const response = await axios.post<AdminResponse>(
-        `${API_BASE_UR}/login`,
+        `${API_BASE_URL}/login`,
         { email, password },
         { withCredentials: true }
       );
@@ -48,7 +49,7 @@ export const AdminLoginApi = async (
   ): Promise<AxiosResponse<ForgotPasswordFormData>> => {
     try {
       const response = await axios.post<ForgotPasswordFormData>(
-        `${API_BASE_UR}/requestForgotPassword`,
+        `${API_BASE_URL}/requestForgotPassword`,
         { email },
         { withCredentials: true }
       );
@@ -67,7 +68,7 @@ export const AdminLoginApi = async (
   ): Promise<AxiosResponse<ForgotPasswordFormData>> => {
     try {
       const response = await axios.post<ForgotPasswordFormData>(
-        `${API_BASE_UR}/verifyOtp`,
+        `${API_BASE_URL}/verifyOtp`,
         { email, otp },
         { withCredentials: true }
       );
@@ -86,7 +87,7 @@ export const AdminLoginApi = async (
   ): Promise<AxiosResponse<ForgotPasswordFormData>> => {
     try {
       const response = await axios.post<ForgotPasswordFormData>(
-        `${API_BASE_UR}/resetPassword`,
+        `${API_BASE_URL}/resetPassword`,
         { email, password },
         { withCredentials: true }
       );
