@@ -44,7 +44,7 @@ const ComplaintSchema: Schema = new Schema({
   description: { type: String, required: true },
   assignedMechanics: [
     {
-      mechanicId: { type: String, required: true },
+      mechanicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
       status: { type: String, enum: ['pending', 'accept', 'reject'], required: true , default: 'pending'},
       reason: { type: String, default: null }
     }

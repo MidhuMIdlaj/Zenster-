@@ -15,7 +15,7 @@ const employeeSchema = new mongoose.Schema({
   isDeleted: { type: Boolean, default: false },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   workingStatus: { type: String, enum:['Available', 'Occupied'], default: "Available"},
-  fieldOfMechanic: { type: [String], enum: ['Battery', 'Invertor', 'Solar'], default: [] },
+  fieldOfMechanic: { type: [String], enum: ['Battery', 'Invertor', 'Inverter', 'Solar'], default: [] },
   lastAssignedAt: { type: Date, default: null }
 },{
   timestamps: true,

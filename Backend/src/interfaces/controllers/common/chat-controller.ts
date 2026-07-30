@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { StatusCode } from '../../../shared/enums/statusCode';
+import { sendError, sendSuccess } from '../../../shared/response';
 import { io } from '../../../server';
 import { IAttachment } from '../../../domain/Repository/i-chat-repository';
 import { getSocketInstance } from '../../../app';
@@ -31,7 +32,7 @@ export class ChatController {
       const { userId, receiverId } = req.params;
       const conversationId = [userId, receiverId].sort().join('_');
       const messages = await this.getChatHistoryUseCase.execute(userId, receiverId);
-      res.json(messages);
+      sendSuccess(res, messages, 'Chat history retrieved successfully', StatusCode.OK);
     } catch (err) {
       console.error('Error fetching chat history:', err);
       next(err);
@@ -42,7 +43,7 @@ export class ChatController {
     try {
       const { userId } = req.params;
       const conversations = await this.getConversationsUsecase.execute(userId);
-      res.json(conversations);
+      sendSuccess(res, conversations, 'Conversations retrieved successfully', StatusCode.OK);
     } catch (err) {
       console.error('Error fetching conversations:', err);
       next(err);
@@ -58,7 +59,7 @@ export class ChatController {
       const files = req.files as Express.Multer.File[] | undefined;
 
       if (!senderId || !receiverId || !conversationId || !senderRole || !receiverRole) {
-        res.status(StatusCode.BAD_REQUEST).json({ error: 'Missing required fields' });
+        sendError(res, 'Missing required fields', StatusCode.BAD_REQUEST);
         return;
       }
 
@@ -118,10 +119,10 @@ export class ChatController {
         senderRole
       );
 
-      res.status(StatusCode.CREATED).json(savedMessage);
+      sendSuccess(res, savedMessage, 'Message sent successfully', StatusCode.CREATED);
     } catch (err) {
       console.error('Error saving message:', err);
-      res.status(StatusCode.BAD_REQUEST).json({ error: 'Failed to send message', details: (err as Error).message });
+      sendError(res, 'Failed to send message', StatusCode.BAD_REQUEST, (err as Error).message, undefined);
       next(err);
     }
   };
@@ -132,17 +133,14 @@ markMessagesAsRead = async (req: Request, res: Response, next: NextFunction): Pr
     const { conversationId, userId } = req.body;
     
     if (!conversationId || !userId) {
-      res.status(StatusCode.BAD_REQUEST).json({ error: 'Missing required fields' });
+      sendError(res, 'Missing required fields', StatusCode.BAD_REQUEST);
       return;
     }
     const markedCount = await this.MarkMessagesAsReadUseCase.execute({conversationId, userId});
     if (io) {
       io.to(`user_${userId}`).emit('messages_read', { conversationId });
     }
-    res.json({ 
-      success: true, 
-      markedCount 
-    });
+    sendSuccess(res, { markedCount }, 'Messages marked as read', StatusCode.OK);
   } catch (err) {
     console.error('Error marking messages as read:', err);
     next(err);

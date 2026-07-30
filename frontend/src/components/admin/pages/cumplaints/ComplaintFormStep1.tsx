@@ -56,11 +56,11 @@ const ComplaintFormStep1: React.FC<ComplaintFormStep1Props> = ({
     setShowCustomerEmailDropdown(true);
   };
 
-  const handleCustomerEmailSelect = (email: string) => {
+  const handleCustomerEmailSelect = (user: { email: string; name?: string }) => {
     const event = {
       target: {
         name: 'customerEmail',
-        value: email
+        value: user.email
       }
     } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(event);
@@ -165,14 +165,12 @@ useEffect(() => {
                 filteredCustomerEmails.map((user, idx) => (
                   <div
                     key={`customer-${idx}`}
-                    onClick={() => handleCustomerEmailSelect(user.email)}
+                    onClick={() => handleCustomerEmailSelect(user)}
                     className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center"
                   >
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900 truncate">{user.email}</div>
-                      {user.name && (
-                        <div className="text-xs text-gray-500 truncate">{user.name}</div>
-                      )}
+                      <div className="font-medium text-gray-900 truncate">{user.name ?? user.email}</div>
+                      <div className="text-xs text-gray-500 truncate">{user.email}</div>
                     </div>
                   </div>
                 ))

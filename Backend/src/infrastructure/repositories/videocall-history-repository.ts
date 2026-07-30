@@ -13,11 +13,12 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
       const newRecord = new VideoCallHistoryModel(callRecord);
       const savedRecord = await newRecord.save();
       return savedRecord;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating video call history:', error);
 
-      if (error.name === 'MongoServerError' && error.code === 11000) {
-        if (error.keyPattern?.roomId) {
+      const e = error as Record<string, unknown>;
+      if (e && e['name'] === 'MongoServerError' && (e['code'] as number) === 11000) {
+        if ((e['keyPattern'] as Record<string, unknown>)?.roomId) {
           throw new Error('A call with this room ID already exists');
         }
       }
@@ -51,10 +52,11 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
         throw new Error('Call record not found');
       }
       return updatedRecord;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error('[VideoCallHistoryRepoImpl] Update error:', {
-        message: error.message,
-        stack: error.stack,
+        message: e?.message,
+        stack: e?.stack,
         roomId,
       });
       throw error;
@@ -80,10 +82,11 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
     try {
       const record = await VideoCallHistoryModel.findOne({ roomId });
       return record;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error('[VideoCallHistoryRepoImpl] FindByRoomId error:', {
-        message: error.message,
-        stack: error.stack,
+        message: e?.message,
+        stack: e?.stack,
         roomId,
       });
       throw error;
@@ -94,10 +97,11 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
     try {
       const records = await VideoCallHistoryModel.find().sort({ createdAt: -1 });
       return records;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error('[VideoCallHistoryRepoImpl] FindAll error:', {
-        message: error.message,
-        stack: error.stack,
+        message: e?.message,
+        stack: e?.stack,
       });
       throw error;
     }

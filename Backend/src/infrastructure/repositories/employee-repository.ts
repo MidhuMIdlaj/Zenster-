@@ -13,6 +13,9 @@ import { IFindAllCoordinatorAndMechanic } from "../../domain/dtos/Employee-useca
 import { IGetEmployeeProfileUsecase } from "../../domain/dtos/Employee-usecase/get-employee-profile-usecase-interface";
 import { IGetAvailableMechanicUsecase } from "../../domain/dtos/complaint-usecase/get-available-mechanic-usecase-interface";
 import { ComplaintReassignmentScheduler } from "../Services/scheduler-service";
+import { ISafeEmployee } from "../../domain/dtos/Employee-usecase/safe-employee-interface";
+
+type UnknownRecord = Record<string, unknown>;
 
 const priorityMap: Record<string, number> = {
   high: 3,
@@ -22,8 +25,49 @@ const priorityMap: Record<string, number> = {
 
 const MAX_PENDING_COMPLAINTS = 5;
 
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 @injectable()
 export default class EmployeeRepoImpl implements EmployeeRepository {
+  private buildFieldRegex(productType: string): RegExp[] {
+    const normalizedType = productType.toLowerCase().trim();
+    if (!normalizedType) {
+      return [/.*/];
+    }
+
+    const aliases = this.getProductTypeAliases(normalizedType);
+    const regexes: RegExp[] = [];
+
+    aliases.forEach((alias) => {
+      const escapedAlias = escapeRegex(alias);
+      regexes.push(new RegExp(`\\b${escapedAlias}s?\\b`, 'i'));
+      regexes.push(new RegExp(`${escapedAlias}`, 'i'));
+    });
+
+    const uniqueSources = Array.from(new Set(regexes.map((regex) => regex.source)));
+    return uniqueSources.map((source) => new RegExp(source, 'i'));
+  }
+
+  private getProductTypeAliases(productType: string): string[] {
+    const normalized = productType.toLowerCase().trim();
+    const aliases = new Set<string>();
+    aliases.add(normalized);
+
+    if (normalized.includes('invert')) {
+      aliases.add('inverter');
+      aliases.add('invertor');
+    }
+
+    if (normalized.includes('battery')) {
+      aliases.add('battery');
+    }
+
+    if (normalized.includes('solar')) {
+      aliases.add('solar');
+    }
+
+    return Array.from(aliases);
+  }
   constructor(
     @inject(TYPES.EmailService) private EmailService: EmailService,
   ) { }
@@ -101,21 +145,17 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
     await EmployeeModel.findByIdAndUpdate(id, { workingStatus: status });
   }
 
-  async findBestMechanic(productType: string, priority: string, complaintId?: string): Promise<any> {
+  async findBestMechanic(productType: string, priority: 'high' | 'medium' | 'low'): Promise<ISafeEmployee | null> {
     try {
       const normalizedType = productType.toLowerCase().trim();
 
+      const fieldMatches = this.buildFieldRegex(normalizedType);
       const availableMechanics = await EmployeeModel.find({
         position: 'mechanic',
         isDeleted: false,
         status: 'active',
         workingStatus: 'Available',
-        fieldOfMechanic: {
-          $in: [
-            new RegExp(`^${normalizedType}$`, 'i'),
-            new RegExp(`^${normalizedType}s?$`, 'i')
-          ]
-        }
+        fieldOfMechanic: { $in: fieldMatches }
       }).sort({ experience: -1 });
 
       const mechanicsWithWorkload = await Promise.all(
@@ -146,19 +186,16 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
         });
 
       if (eligibleMechanics.length > 0) {
-        return eligibleMechanics[0].mechanic;
+        const mech = eligibleMechanics[0].mechanic as unknown;
+        const mechObj = (mech as { toObject?: () => unknown }).toObject?.() ?? mech;
+        return this.toSafeEmployee(mechObj as any);
       }
 
       const busyFieldMechanics = await EmployeeModel.find({
         position: 'mechanic',
         isDeleted: false,
         status: 'active',
-        fieldOfMechanic: {
-          $in: [
-            new RegExp(`^${normalizedType}$`, 'i'),
-            new RegExp(`^${normalizedType}s?$`, 'i')
-          ]
-        }
+        fieldOfMechanic: { $in: fieldMatches }
       });
 
       const prioritizedBusyMechanic = await Promise.all(
@@ -208,7 +245,9 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
       );
 
       if (prioritizedBusyMechanic.length > 0 && prioritizedBusyMechanic[0]) {
-        return prioritizedBusyMechanic[0].mechanic;
+        const mech = prioritizedBusyMechanic[0].mechanic as unknown;
+        const mechObj = (mech as { toObject?: () => unknown }).toObject?.() ?? mech;
+        return this.toSafeEmployee(mechObj as any);
       }
 
       // const allAvailableMechanics = await EmployeeModel.find({
@@ -251,13 +290,14 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
     priority: string,
     excludeMechanicId: string
   ): Promise<Employee | null> {
+    const fieldMatches = this.buildFieldRegex(productType);
     const result = await EmployeeModel.findOne({
       _id: { $ne: excludeMechanicId },
       position: 'mechanic',
       isDeleted: false,
       status: 'active',
       workingStatus: 'Available',
-      fieldOfMechanic: { $in: [new RegExp(`^${productType}$`, 'i')] }
+      fieldOfMechanic: { $in: fieldMatches }
     }).sort({ experience: -1 }).lean();
 
     return result ? this.toDomainEntity(result) : null;
@@ -280,7 +320,7 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
         position: 'mechanic',
         isDeleted: false
       });
-      return mechanics.map(this.toDomainEntity);
+      return mechanics.map(m => this.toDomainEntity(m));
     } catch (error) {
       console.error("Error finding mechanics:", error);
       throw new ServerError("Failed to retrieve mechanics");
@@ -293,7 +333,7 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
         position: 'coordinator',
         isDeleted: false
       });
-      return coordinators.map(this.toDomainEntity);
+      return coordinators.map(c => this.toDomainEntity(c));
     } catch (error) {
       console.error("Error finding coordinators:", error);
       throw new ServerError("Failed to retrieve coordinators");
@@ -320,22 +360,42 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
 
   private toDomainEntity(employee: any): Employee {
     return {
-      id: employee._id.toString(),
-      employeeName: employee.employeeName,
-      emailId: employee.emailId,
-      joinDate: new Date(employee.joinDate),
-      contactNumber: employee.contactNumber,
-      address: employee.address,
-      currentSalary: employee.currentSalary,
-      age: employee.age,
-      position: employee.position,
-      previousJob: employee.previousJob,
-      experience: employee.experience,
-      status: employee.status,
-      isDeleted: employee.isDeleted,
-      password: employee.password,
-      workingStatus: employee.workingStatus,
-      fieldOfMechanic: employee.fieldOfMechanic
+      id: String(employee._id),
+      employeeName: String(employee.employeeName ?? ''),
+      emailId: String(employee.emailId ?? ''),
+      joinDate: new Date(employee.joinDate as string | Date),
+      contactNumber: String(employee.contactNumber ?? ''),
+      address: String(employee.address ?? ''),
+      currentSalary: Number(employee.currentSalary ?? 0),
+      age: Number(employee.age ?? 0),
+      position: (employee.position as 'coordinator' | 'mechanic') ?? 'mechanic',
+      previousJob: String(employee.previousJob ?? ''),
+      experience: Number(employee.experience ?? 0),
+      status: (String(employee.status ?? '') as 'active' | 'inactive'),
+      isDeleted: Boolean(employee.isDeleted ?? false),
+      password: String(employee.password ?? ''),
+      workingStatus: (String(employee.workingStatus ?? '') as 'Available' | 'Occupied'),
+      fieldOfMechanic: (employee.fieldOfMechanic as unknown) as string[]
+    };
+  }
+
+  private toSafeEmployee(employee: any): ISafeEmployee {
+    return {
+      id: String(employee._id ?? ''),
+      employeeName: String(employee.employeeName ?? ''),
+      emailId: String(employee.emailId ?? ''),
+      joinDate: new Date(employee.joinDate as string | Date),
+      contactNumber: String(employee.contactNumber ?? ''),
+      address: String(employee.address ?? ''),
+      currentSalary: Number(employee.currentSalary ?? 0),
+      age: Number(employee.age ?? 0),
+      position: (employee.position as 'mechanic' | 'coordinator') ?? 'mechanic',
+      previousJob: employee.previousJob ? String(employee.previousJob) : null,
+      experience: Number(employee.experience ?? 0),
+      status: String(employee.status ?? ''),
+      isDeleted: Boolean(employee.isDeleted ?? false),
+      workingStatus: (String(employee.workingStatus ?? '') as 'Available' | 'Occupied'),
+      fieldOfMechanic: (employee.fieldOfMechanic as unknown) as string[]
     };
   }
 
@@ -423,7 +483,7 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
     }
   }
 
-  async softDeleteEmployee(EmployeeId: string): Promise<any> {
+  async softDeleteEmployee(EmployeeId: string): Promise<Employee> {
     const ComplaintSafe = await ComplaintModel.findOne({
       'assignedMechanics.mechanicId': EmployeeId,
       workingStatus: 'progress'
@@ -438,7 +498,8 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
       { isDeleted: true },
       { new: true }
     );
-    return client;
+    if (!client) throw new Error('Employee not found');
+    return this.toDomainEntity(client as any);
   }
 
   async updateEmployee(employeeId: string, updatedData: Partial<Employee>): Promise<IEditEmployeeUsecase | null> {
@@ -502,7 +563,7 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
     limit: number = 10
   ): Promise<{ employees: Employee[]; total: number }> {
     const skip = (page - 1) * limit;
-    const query: any = { isDeleted: false };
+    const query: Record<string, unknown> = { isDeleted: false };
 
     if (searchTerm) {
       const searchRegex = new RegExp(searchTerm, 'i');

@@ -1,4 +1,4 @@
-export interface ResponseDTO<T = any> {
+export interface ResponseDTO<T = unknown> {
 
   success: boolean;
 

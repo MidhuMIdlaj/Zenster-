@@ -4,6 +4,7 @@ import ResetPasswordRequestUseCase from "../../../Application/usecases/employee/
 import ResetPasswordUseCase from "../../../Application/usecases/employee/reset-password-usecase";
 import { generateAccessToken, generateRefreshToken } from "../../../middleware/auth-middleware";
 import { StatusCode } from "../../../shared/enums/statusCode";
+import { sendError, sendSuccess } from "../../../shared/response";
 import { inject, injectable } from "inversify";
 import { TYPES } from "../../../types";
 import ILoginEmployeeUseCase from "../../../Application/interface/employee/login-employee-usecase-interface";
@@ -51,32 +52,32 @@ export default class EmployeeAuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 
-    res.status(StatusCode.OK).json({
-      token: accessToken, 
+sendSuccess(res, {
+      token: accessToken,
       position: employee.position,
       id: employee.id,
       employeeName: employee.employeeName,
-      isDeleted : employee.isDeleted,
-      role: employee.position,
-    });
+      isDeleted: employee.isDeleted,
+      role: employee.position
+    }, 'Employee authenticated successfully', StatusCode.OK);
 
   } catch (err: unknown) {
-  let message = 'Authentication failed';
-  if (err instanceof Error) {
-    message = err.message;
+    let message = 'Authentication failed';
+    if (err instanceof Error) {
+      message = err.message;
+    }
+    sendError(res, message, StatusCode.UNAUTHORIZED);
   }
-  res.status(StatusCode.UNAUTHORIZED).json({ message });
- }
 };
 
   requestResetPassword = async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       await this.resetPasswordRequestUseCase.execute(email);
-      res.status(StatusCode.OK).json({ message: "OTP sent to email." });
+      sendSuccess(res, null, "OTP sent to email.", StatusCode.OK);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
-      res.status(StatusCode.BAD_REQUEST).json({ message });
+      sendError(res, message, StatusCode.BAD_REQUEST);
     }
   };
 
@@ -85,24 +86,24 @@ export default class EmployeeAuthController {
         const { email, otp } = req.body;
         const isValid = await this.resetPasswordRequestUseCase.verifyOtp(email, otp);
         if (isValid) {
-          res.status(StatusCode.OK).json({ message: "OTP verified successfully." });
+          sendSuccess(res, null, "OTP verified successfully.", StatusCode.OK);
         } else {
-          res.status(StatusCode.BAD_REQUEST).json({ message: "Invalid OTP" });
+          sendError(res, "Invalid OTP", StatusCode.BAD_REQUEST);
         }
-      }catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Something went wrong';
-      res.status(StatusCode.BAD_REQUEST).json({ message });
-    }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Something went wrong';
+        sendError(res, message, StatusCode.BAD_REQUEST);
+      }
     };
 
   resendOTP = async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       await this.resetPasswordRequestUseCase.execute(email);
-      res.status(StatusCode.OK).json({ message: "New OTP sent to email." });
+      sendSuccess(res, null, "New OTP sent to email.", StatusCode.OK);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
-      res.status(StatusCode.BAD_REQUEST).json({ message });
+      sendError(res, message, StatusCode.BAD_REQUEST);
     }
   };
 
@@ -110,10 +111,10 @@ export default class EmployeeAuthController {
     try {
       const { email, password } = req.body;
       await this.resetPasswordUseCase.execute(email, password);
-      res.status(StatusCode.OK).json({ message: "Password reset successfully." });
-    }catch (err: unknown) {
+      sendSuccess(res, null, "Password reset successfully.", StatusCode.OK);
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
-      res.status(StatusCode.BAD_REQUEST).json({ message });
+      sendError(res, message, StatusCode.BAD_REQUEST);
     }
   };
 }

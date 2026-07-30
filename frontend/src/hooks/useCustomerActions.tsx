@@ -39,9 +39,10 @@ export const useCustomerActions = () => {
       setIsRefreshing(true);
       setLoading(true);
       const response = await ClientListApi(); 
+      const responseData = response?.data;
       
-      if (response && Array.isArray(response.clients)) {
-        const mappedClients = response.clients
+      if (response && responseData && Array.isArray(responseData.clients)) {
+        const mappedClients = responseData.clients
           .filter((client: { isDeleted: boolean }) => !client.isDeleted)
           .map((client: { 
             id: string; 

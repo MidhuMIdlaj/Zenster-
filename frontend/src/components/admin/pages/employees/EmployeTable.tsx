@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Plus, Briefcase,  Search, Filter, Check, ChevronDown } from "lucide-react";
+import { Plus, Briefcase, Search, Filter, Check, ChevronDown, MapPin, List as ListIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import Swal from 'sweetalert2';
@@ -17,6 +17,7 @@ import EmployeeForm from "../../../../components/admin/pages/employees/EmployeeF
 import EmployeeDetails from "../../../../components/admin/pages/employees/EmployeeDetails";
 import DeleteConfirmation from "../../../../components/admin/pages/employees/DeleteConfirmation";
 import EmployeeList from "../../../../components/admin/pages/employees/EmployeeList";
+import EmployeeLocationManagement from "../../../../components/admin/pages/employees/EmployeeLocationManagement";
 import Pagination from "../../../../components/admin/pages/employees/pagination";
 import ErrorBoundary from "../../../../utils/ErrorBoundary";
 import RefreshButton from "../../../reusableComponent/RefreshButton";
@@ -24,6 +25,7 @@ import ActionButton from "../../../reusableComponent/ActionButton";
 
 const EmployeeTable: React.FC = () => {
   // State hooks
+  const [viewMode, setViewMode] = useState<'table' | 'location'>('table');
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -104,9 +106,9 @@ const EmployeeTable: React.FC = () => {
         itemsPerPage
       );
       // Check if response has nested structure
-      const employees = response.data?.employees || response.employees || [];
-      const total = response.data?.total || response.total || 0;
-      const totalPages = response.data?.totalPages || response.totalPages || 1;
+      const employees = (response as any).data?.employees || (response as any).employees || [];
+      const total = (response as any).data?.total || (response as any).total || 0;
+      const totalPages = (response as any).data?.totalPages || (response as any).totalPages || 1;
       
       setEmployees(employees);
       setTotalItems(total);
@@ -428,6 +430,38 @@ const handleInputChange = (
     <p className="text-gray-600 mt-1">View and manage your employee database</p>
     </div>
    <div className="flex items-center gap-3">
+   {/* View Mode Toggle Buttons */}
+   <div className="flex gap-2 items-center bg-gray-100 rounded-lg p-1">
+     <motion.button
+       whileHover={{ scale: 1.03 }}
+       whileTap={{ scale: 0.97 }}
+       onClick={() => setViewMode('table')}
+       className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all ${
+         viewMode === 'table'
+           ? 'bg-white text-blue-600 shadow-sm'
+           : 'text-gray-600 hover:text-gray-800'
+       }`}
+       title="Table View"
+     >
+       <ListIcon size={16} />
+       <span className="text-sm font-medium">List</span>
+     </motion.button>
+     <motion.button
+       whileHover={{ scale: 1.03 }}
+       whileTap={{ scale: 0.97 }}
+       onClick={() => setViewMode('location')}
+       className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all ${
+         viewMode === 'location'
+           ? 'bg-white text-blue-600 shadow-sm'
+           : 'text-gray-600 hover:text-gray-800'
+       }`}
+       title="Location Map View"
+     >
+       <MapPin size={16} />
+       <span className="text-sm font-medium">Map</span>
+     </motion.button>
+   </div>
+
     <RefreshButton
       isRefreshing={isRefreshing}
       onClick={() => {
@@ -451,7 +485,9 @@ const handleInputChange = (
     </div>
    </div>
     </motion.div>
-      <div className="p-6 border-b border-gray-200 bg-white">
+     {/* Search and Filter Section - Only in Table View */}
+     {viewMode === 'table' && (
+     <div className="p-6 border-b border-gray-200 bg-white">
         <div className="flex flex-col md:flex-row items-center gap-4">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -589,26 +625,39 @@ const handleInputChange = (
           </div>
         </div>
       </div>
+      )}
 
-      {/* Employee Table */}
-      <EmployeeList 
-        isLoading={isLoading}
-        currentItems={employees}
-        onView={openViewModal}
-        onDelete={openDeleteModal}
-        onToggleStatus={toggleEmployeeStatus}
-      />
+      {/* Content Area - Table or Location View */}
+      {viewMode === 'table' ? (
+       <>
+         {/* Employee Table */}
+         <EmployeeList 
+           isLoading={isLoading}
+           currentItems={employees}
+           onView={openViewModal}
+           onDelete={openDeleteModal}
+           onToggleStatus={toggleEmployeeStatus}
+         />
 
-      {/* Pagination */}
-      {totalItems > 0 && (
-        <Pagination 
-          currentPage={currentPage}
-          totalPages={totalPages}
-          indexOfFirstItem={(currentPage - 1) * itemsPerPage + 1}
-          indexOfLastItem={Math.min(currentPage * itemsPerPage, totalItems)}
-          totalItems={totalItems}
-          onPageChange={handlePageChange}
-        />
+         {/* Pagination */}
+         {totalItems > 0 && (
+           <Pagination 
+             currentPage={currentPage}
+             totalPages={totalPages}
+             indexOfFirstItem={(currentPage - 1) * itemsPerPage + 1}
+             indexOfLastItem={Math.min(currentPage * itemsPerPage, totalItems)}
+             totalItems={totalItems}
+             onPageChange={handlePageChange}
+           />
+         )}
+       </>
+      ) : (
+       <div className="p-6 bg-gray-50 flex-1">
+         <EmployeeLocationManagement 
+           showListView={true}
+           showMapView={true}
+         />
+       </div>
       )}
 
       {/* Add/Edit Employee Modal */}

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { store } from '../store/Store';
-import { clearAdminAuth } from '../store/AdminAuthSlice';
-import { clearEmployeeAuth } from '../store/EmployeeAuthSlice';
+import { clearAdminAuth, setAdminAuth } from '../store/AdminAuthSlice';
+import { clearEmployeeSession } from '../utils/authUtils';
 import { configManager } from '../config/config';
 
 const axiosInstance = axios.create({
@@ -12,7 +12,17 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use((config) => {
   // Get token from localStorage or Redux store
   const employeeData = JSON.parse(localStorage.getItem('employeeData') || '{}');
-  const token = employeeData.token || localStorage.getItem('token');
+  let adminData: { token?: string } = {};
+
+  try {
+    const persistedRoot = JSON.parse(localStorage.getItem('persist:root') || '{}');
+    const adminAuth = persistedRoot.adminAuth ? JSON.parse(persistedRoot.adminAuth) : {};
+    adminData = adminAuth.adminData || {};
+  } catch (error) {
+    adminData = {};
+  }
+
+  const token = employeeData.token || adminData.token;
   
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -28,6 +38,15 @@ axiosInstance.interceptors.response.use(
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      const requestUrl = originalRequest.url || '';
+      const isAdminRequest = typeof requestUrl === 'string' && requestUrl.startsWith('/admin');
+      const hasEmployeeToken = Boolean(store.getState().employeeAuth.employeeData?.token);
+      const hasAdminToken = Boolean(store.getState().adminAuth.adminData?.token);
+
+      if (!isAdminRequest || hasEmployeeToken || !hasAdminToken) {
+        await clearEmployeeSession();
+        return Promise.reject(error);
+      }
       
       try {
         const response = await axios.post(
@@ -37,26 +56,24 @@ axiosInstance.interceptors.response.use(
         ); 
         
         const newToken = response.data.accessToken;
-        const employeeData = JSON.parse(localStorage.getItem('employeeData') || '{}');
-        employeeData.token = newToken;
-        localStorage.setItem('employeeData', JSON.stringify(employeeData));
+        const adminData = store.getState().adminAuth.adminData;
+        if (adminData) {
+          store.dispatch(setAdminAuth({ ...adminData, token: newToken }));
+          localStorage.setItem('token', newToken);
+        }
         
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         store.dispatch(clearAdminAuth());
-        store.dispatch(clearEmployeeAuth());
-        localStorage.removeItem('employeeData');
-        localStorage.removeItem('token');
+        await clearEmployeeSession();
         window.location.href = '/employee-login';
         return Promise.reject(refreshError);
       }
     }
 
      if (error.response?.status === 403 && error.response.data?.shouldLogout) {
-      store.dispatch(clearEmployeeAuth());
-      localStorage.removeItem('employeeData');
-      localStorage.removeItem('token');
+      await clearEmployeeSession();
       window.location.href = '/employee-login'; 
       return Promise.reject(error);
     }

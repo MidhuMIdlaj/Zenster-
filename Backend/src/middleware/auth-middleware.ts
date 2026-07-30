@@ -16,6 +16,7 @@ declare global {
 
 interface TokenPayload {
   userId: string;
+  id?: string;
   role: string;
   email: string;
   iat?: number;
@@ -103,8 +104,17 @@ export const verifyToken = async  (req: Request, res: Response, next: NextFuncti
 
       if (decoded && typeof decoded === 'object') {
         const payload = decoded as TokenPayload;
+        const userId = payload.userId || payload.id;
+
+        if (!userId) {
+          req.session.token = undefined;
+          res.clearCookie('accessToken');
+          res.status(StatusCode.UNAUTHORIZED).json({ success: false, error: 'Invalid token payload' });
+          return;
+        }
+
         if(payload.role == 'mechanic' || payload.role == 'coordinator'){
-          const employee = await Employee.findById(payload.userId);
+          const employee = await Employee.findById(userId);
             if (!employee || employee.isDeleted ) {
             return res.status(StatusCode.FORBIDDEN).json({
               success: false,
@@ -119,11 +129,11 @@ export const verifyToken = async  (req: Request, res: Response, next: NextFuncti
             });
           }
         }
-        req.user = { userId: payload.userId, role: payload.role, email: payload.email };
+        req.user = { userId, role: payload.role, email: payload.email };
 
         if (payload.exp && Date.now() >= payload.exp * 1000 - 300000) {
           const newToken = jwt.sign(
-            { userId: payload.userId, role: payload.role, email: payload.email },
+            { userId, role: payload.role, email: payload.email },
             config.jwtSecret,
             { expiresIn: '1h' }
           );

@@ -51,6 +51,6 @@ export default interface IEmployeeRepository  {
     priority: string,
     excludeMechanicId: string
   ): Promise<Employee | null>;
-  softDeleteEmployee(employeeId : string): Promise<Employee>
+  softDeleteEmployee(employeeId : string): Promise<Employee | null>
   updateLastAssignedAt(mechanicId: string): Promise<void>;
 }

@@ -5,7 +5,7 @@ export interface SoftDeleteEmployeeInput {
 
 export interface SoftDeleteEmployeeOutput {
   success: boolean;
-  data?: any;
+  data?: unknown;
   message: string;
   statusCode: number;
 }

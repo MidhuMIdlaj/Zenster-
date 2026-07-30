@@ -20,7 +20,14 @@ export const errorHandler = (
   }
 
   // Handle MongoDB duplicate key error
-  if (err.name === 'MongoError' && (err as any).code === 11000) {
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'name' in err &&
+    (err as { name?: string }).name === 'MongoError' &&
+    'code' in err &&
+    (err as { code?: number }).code === 11000
+  ) {
     return res.status(409).json({
       success: false,
       message: "An employee with this email already exists"

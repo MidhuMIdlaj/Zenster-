@@ -1,5 +1,6 @@
 import { RequestHandler, Request, Response, NextFunction } from "express";
 import { StatusCode } from "../../../shared/enums/statusCode";
+import { sendError, sendResponse, sendSuccess } from "../../../shared/response";
 import { inject, injectable } from "inversify";
 import { TYPES } from "../../../types";
 import { IAddClientUseCase } from "../../../Application/interface/admin/user/add-client-usecase-interface";
@@ -34,7 +35,7 @@ export default class ClientController {
       } = req.body;
      
       if (!products || !Array.isArray(products)) {
-        res.status(StatusCode.BAD_REQUEST).json({ message: "Products must be an array" });
+        sendError(res, "Products must be an array", StatusCode.BAD_REQUEST);
         return;
       }
       const newClient = await this.addClientUseCase.execute(
@@ -46,10 +47,7 @@ export default class ClientController {
         products
       );
 
-      res.status(StatusCode.CREATED).json({
-        message: newClient ? "Client created/updated successfully" : "Failed to create/update client",
-        client: newClient,
-      });
+      sendSuccess(res, { client: newClient }, newClient ? "Client created/updated successfully" : "Failed to create/update client", StatusCode.CREATED);
     } catch (err: unknown) {
       next(err instanceof Error ? err : new Error("Unknown error occurred"));
    }
@@ -60,14 +58,7 @@ export default class ClientController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const { clients, total } = await this.getClientsUsecases.execute({page, limit});
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: "Fetched clients successfully",
-        clients,
-        total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page
-      });
+      sendSuccess(res, { clients, total, totalPages: Math.ceil(total / limit), currentPage: page }, "Fetched clients successfully", StatusCode.OK);
     } catch (err: unknown) {
      next(err instanceof Error ? err : new Error("Unknown error occurred"));
    }
@@ -79,7 +70,7 @@ export default class ClientController {
       const updateData = req.body;
 
       if (!clientId) {
-        res.status(StatusCode.BAD_REQUEST).json({ message: "Client ID is required" });
+        sendError(res, "Client ID is required", StatusCode.BAD_REQUEST);
         return;
       }
 
@@ -89,14 +80,11 @@ export default class ClientController {
       );
 
       if (!updatedClient) {
-        res.status(StatusCode.NOT_FOUND).json({ message: "Client not found" });
+        sendError(res, "Client not found", StatusCode.NOT_FOUND);
         return;
       }
 
-      res.status(StatusCode.OK).json({
-        message: "Client updated successfully",
-        client: updatedClient,
-      });
+      sendSuccess(res, { client: updatedClient }, "Client updated successfully", StatusCode.OK);
       return;
     } catch (err: unknown) {
       next(err);
@@ -113,12 +101,10 @@ export default class ClientController {
         status}
       );
       if (!success) {
-        res.status(StatusCode.NOT_FOUND).json({
-          message: "Client not found or status unchanged",
-        });
+        sendError(res, "Client not found or status unchanged", StatusCode.NOT_FOUND);
         return;
       }
-      res.status(StatusCode.OK).json({ message: "Client status updated" });
+      sendSuccess(res, null, "Client status updated", StatusCode.OK);
     } catch (err: unknown) {
       next(err);
     }
@@ -129,10 +115,10 @@ export default class ClientController {
       const { id } = req.params;
       const client = await this.findClientByIdUsecases.execute(id);
       if (!client) {
-        res.status(StatusCode.NOT_FOUND).json({ message: "Client not found" });
+        sendError(res, "Client not found", StatusCode.NOT_FOUND);
         return;
       }
-      res.status(StatusCode.OK).json(client);
+      sendSuccess(res, client, "Client retrieved successfully", StatusCode.OK);
     } catch (error) {
       next(error);
     }
@@ -144,10 +130,10 @@ export default class ClientController {
       const result = await this.deleteUserUsecases.execute(ClientId);
 
       if (!result) {
-        res.status(StatusCode.NOT_FOUND).json({ message: "User not found or already deleted" });
+        sendError(res, "User not found or already deleted", StatusCode.NOT_FOUND);
         return;
       }
-      res.status(StatusCode.OK).json({ message: "User soft deleted successfully" });
+      sendSuccess(res, null, "User soft deleted successfully", StatusCode.OK);
       return;
     } catch (error: unknown) {
       next(error);
@@ -166,14 +152,7 @@ export default class ClientController {
         page,
         limit
       );
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: "Searched clients successfully",
-        clients,
-        total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page
-      });
+      sendSuccess(res, { clients, total, totalPages: Math.ceil(total / limit), currentPage: page }, "Searched clients successfully", StatusCode.OK);
     } catch (err: unknown) {
       next(err);
     }

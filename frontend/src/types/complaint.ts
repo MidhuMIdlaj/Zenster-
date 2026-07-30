@@ -77,7 +77,8 @@ export interface ComplaintResponse extends ComplaintFormData {
 
 export interface Mechanic {
   mechanicId: string;
-  name: string;
+  name?: string;
+  employeeName?: string;
   specialization?: string;
   contactNumber: string;
   email: string;

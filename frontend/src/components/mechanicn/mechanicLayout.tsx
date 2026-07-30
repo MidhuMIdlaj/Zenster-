@@ -6,7 +6,9 @@ import MechanicHeader from '../../pages/mechanic/MechanicHeader';
 import NotificationPanel, { Notification } from './NotificationPanel';
 import ConfirmationDialog from '../../components/reusableComponent/ConfirmationDialog';
 import { selectEmployeeAuthData } from '../../store/selectors';
-import { clearEmployeeAuth } from '../../store/EmployeeAuthSlice';
+import { resetLocationState } from '../../store/locationSlice';
+import { LocationTrackingService } from '../../services/location-tracking-service';
+import { clearEmployeeSession } from '../../utils/authUtils';
 import { io } from 'socket.io-client';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -225,7 +227,9 @@ const MechanicLayout = () => {
   // Logout handlers following coordinator pattern
   const handleLogout = async () => {
     try {
-      await dispatch(clearEmployeeAuth());
+      await LocationTrackingService.getInstance().stopTracking();
+      await clearEmployeeSession();
+      dispatch(resetLocationState());
       navigate('/employee-login', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);

@@ -39,7 +39,7 @@ export default class LoginAdminUseCase implements ILoginAdminUseCase{
     }
 
     const token = jwt.sign(
-      { id: admin._id, email: admin.email, role: "admin" },
+      { userId: admin._id.toString(), email: admin.email, role: "admin" },
       process.env.JWT_SECRET!,
       { expiresIn: "24h" }
     );
@@ -51,7 +51,7 @@ export default class LoginAdminUseCase implements ILoginAdminUseCase{
       data: {
         accessToken: token,
         email: admin.email,
-        id: admin._id,
+        id: admin._id.toString(),
         role: "admin"
       }
     };

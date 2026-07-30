@@ -158,9 +158,9 @@ const CustomerTable: React.FC = () => {
       setLoading(true);
       
       const response = await ClientListApi(page, itemsPerPage);
-      console.log(response, "client list response");
-      if (response && response.success) {
-        const mappedClients = response.clients
+      const responseData = response?.data;
+      if (response && response.success && responseData) {
+        const mappedClients = responseData.clients
           .map((client: any) => ({
             id: client.id,
             name: client.clientName,
@@ -178,11 +178,10 @@ const CustomerTable: React.FC = () => {
             warrantyDate: client.products[0].warrantyDate || "",
             guaranteeDate: client.products[0].guaranteeDate || ""
           }));
-          console.log(mappedClients, "mapped clients");
           
         setCustomers(mappedClients);
-        setTotalItems(response.total);
-        setTotalPages(response.totalPages);
+        setTotalItems(responseData.total);
+        setTotalPages(responseData.totalPages);
       }
     } catch (error) {
       console.error("Failed to fetch clients:", error);
@@ -204,8 +203,9 @@ const CustomerTable: React.FC = () => {
         setLoading(true);
         const response = await searchClientsApi(term, status, 1, itemsPerPage);
 
-        if (response && response.success) {
-          const mappedClients = response.clients.map((client: any) => ({
+        const responseData = response?.data;
+        if (response && response.success && responseData) {
+          const mappedClients = responseData.clients.map((client: any) => ({
             id: client._id,
             name: client.clientName,
             email: client.email,
@@ -224,8 +224,8 @@ const CustomerTable: React.FC = () => {
           }));
           
           setCustomers(mappedClients);
-          setTotalItems(response.total);
-          setTotalPages(response.totalPages);
+          setTotalItems(responseData.total);
+          setTotalPages(responseData.totalPages);
           setCurrentPage(1);
         }
       } catch (error) {
@@ -664,7 +664,6 @@ const CustomerTable: React.FC = () => {
       onSort={requestSort}
       onToggleStatus={(id) => toggleStatus(id)}
       onView={(customer) => {
-        console.log(customer, "view customer");
         setSelectedCustomer(customer);
         setShowViewModal(true);
       }}

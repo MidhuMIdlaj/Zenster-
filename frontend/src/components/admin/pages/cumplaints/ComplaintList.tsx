@@ -26,6 +26,21 @@ const ComplaintList: React.FC<ComplaintListProps> = ({
     { key: "createdAt", header: "Date", sortable: true },
   ];
 
+  const getStatusString = (status: unknown): string => {
+    if (!status) return '';
+    if (typeof status === 'string') return status;
+    if (typeof status === 'object' && status !== null && 'status' in status) {
+      return (status as Record<string, unknown>).status as string || '';
+    }
+    return '';
+  };
+
+  const normalizeStatus = (status: string): string => {
+    const normalized = status?.toLowerCase().trim().replace(/\s+/g, '-');
+    if (normalized === 'accepted') return 'processing';
+    return normalized || 'pending';
+  };
+
   const formattedData = currentItems.map((complaint) => ({
     ...complaint,
     customerName: complaint.customerName || "Unknown Customer",
@@ -36,6 +51,9 @@ const ComplaintList: React.FC<ComplaintListProps> = ({
           day: "numeric",
         })
       : "N/A",
+    workingStatus: normalizeStatus(
+      complaint.workingStatus || getStatusString(complaint.status) || 'pending'
+    ),
   }));
 
   if (isLoading) {

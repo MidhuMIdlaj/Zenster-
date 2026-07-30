@@ -56,11 +56,15 @@ const Dashboard: React.FC = () => {
           fetchEmployees()
         ]);
 
-        setRawComplaints(complaints);
-        setRawUsers(user.clients);
-        setRawEmployees(emp.data.employees);
+        const complaintsArray = complaints || [];
+        const usersArray = user?.clients || [];
+        const employeesArray = emp?.data?.employees || [];
+
+        setRawComplaints(complaintsArray);
+        setRawUsers(usersArray);
+        setRawEmployees(employeesArray);
         
-        processAndSetData(complaints, user.clients, emp.data.employees);
+        processAndSetData(complaintsArray, usersArray, employeesArray);
 
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -73,12 +77,10 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (rawComplaints.length > 0 && rawUsers.length > 0 && rawEmployees.length > 0) {
-      processAndSetData(rawComplaints, rawUsers, rawEmployees);
-    }
+    processAndSetData(rawComplaints, rawUsers, rawEmployees);
   }, [selectedMonth, startDate, endDate]);
 
-  const processAndSetData = (complaints: any[], users: any[], employees: any[]) => {
+  const processAndSetData = (complaints: any[] = [], users: any[] = [], employees: any[] = []) => {
     let filteredComplaints = [...complaints];
     
     if (selectedMonth >= 0) {

@@ -15,6 +15,7 @@ import {
 import adminAuthReducer from "./AdminAuthSlice";
 import employeeAuthReducer from "./EmployeeAuthSlice";
 import ComplaintSlice from "./ComplaintSlice";
+import locationReducer from "./locationSlice";
 
 // Configuration for redux-persist
 const persistConfig = {
@@ -26,7 +27,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
   adminAuth: adminAuthReducer,
   employeeAuth: employeeAuthReducer,
-  Complaint: ComplaintSlice
+  Complaint: ComplaintSlice,
+  location: locationReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -47,3 +49,9 @@ export const persistor = persistStore(store);
 // TypeScript types for the store
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
+// Export hooks
+import { useDispatch, useSelector } from 'react-redux';
+
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector = useSelector as (selector: (state: RootState) => any) => any;

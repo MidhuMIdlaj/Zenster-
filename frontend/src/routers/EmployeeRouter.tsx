@@ -24,6 +24,10 @@ const coordinatorRoutes: RouteObject[] = [
             element: <EmployeeDashboard />,
           },
           {
+            path: '/employee/dashboard',
+            element: <EmployeeDashboard />,
+          },
+          {
             path: '/user-management',
             element: <UserManagement />,
           },

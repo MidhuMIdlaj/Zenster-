@@ -4,11 +4,12 @@ import nodemailer from 'nodemailer';
 import { injectable } from 'inversify';
 import { IEmailService } from '../../domain/Repository/i-email-repository';
 import { videoCallInvitationEmail } from '../../service/email-service';
+import { IComplaintReassignmentEmailData } from '../../domain/dtos/Email-service-usecase/complaint-reassignment-email-data.';
 import { config } from '../../config';
 
 @injectable()
 export class EmailService implements IEmailService {
-  private transporter: any = null;
+  private transporter: nodemailer.Transporter | null = null;
   private emailService: string = 'gmail';
   private initPromise: Promise<void> | null = null;
 
@@ -72,7 +73,6 @@ export class EmailService implements IEmailService {
       console.log('[MAILTRAP] Using Mailtrap email service');
     } else {
       this.transporter = this.createGmailTransporter();
-      console.log('[GMAIL] Using Gmail email service');
     }
   }
 
@@ -215,30 +215,41 @@ export class EmailService implements IEmailService {
     );
   }
 
-  async sendComplaintReassignmentEmail(email: string, data: any): Promise<void> {
+  async sendComplaintReassignmentEmail(email: string, data: IComplaintReassignmentEmailData): Promise<void> {
+    const complaintId = data.complaintId;
+    const productName = data.productName;
+    const oldMechanicName = data.oldMechanic?.name ?? '';
+    const rejectionReason = data.rejectionReason;
+    const newMechanicName = data.newMechanic?.name ?? '';
+
     await this.sendMail(
       email,
-      `Complaint Reassigned (ID: ${data.complaintId})`,
+      `Complaint Reassigned (ID: ${complaintId})`,
       `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Complaint Reassignment</h2>
-          <p>Product: ${data.productName}</p>
-          <p>Rejected by: ${data.oldMechanic.name}</p>
-          <p>Reason: ${data.rejectionReason}</p>
-          <p>New Mechanic: ${data.newMechanic.name}</p>
+          <p>Product: ${productName}</p>
+          <p>Rejected by: ${oldMechanicName}</p>
+          <p>Reason: ${rejectionReason}</p>
+          <p>New Mechanic: ${newMechanicName}</p>
         </div>`
     );
   }
 
-  async sendNoMechanicAvailableEmail(data: any): Promise<void> {
+  async sendNoMechanicAvailableEmail(data: IComplaintReassignmentEmailData): Promise<void> {
+    const recipientEmail = data.coordinatorName || 'admin@example.com';
+    const complaintId = data.complaintId;
+    const productName = data.productName;
+    const rejectionReason = data.rejectionReason;
+
     await this.sendMail(
-      data.recipientEmail,
-      `No Mechanic Available for Complaint ${data.complaintId}`,
+      recipientEmail,
+      `No Mechanic Available for Complaint ${complaintId}`,
       `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2 style="color: red;">Urgent: No Mechanic Available</h2>
-          <p>Product: ${data.productName}</p>
-          <p>Reason: ${data.rejectionReason}</p>
+          <p>Product: ${productName}</p>
+          <p>Reason: ${rejectionReason}</p>
         </div>`
     );
   }

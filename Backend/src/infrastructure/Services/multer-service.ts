@@ -1,5 +1,6 @@
 // multerConfig.ts
 import multer, { diskStorage, Multer } from 'multer';
+import { Request } from 'express';
 import path from 'path';
 import fs from 'fs';
 
@@ -44,11 +45,11 @@ export class MulterConfig {
     });
   }
 
-  private fileFilter(req: any, file: any, cb: any): void {
+  private fileFilter(req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(new Error('Only image files are allowed!'));
     }
   }
 

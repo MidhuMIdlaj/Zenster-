@@ -69,8 +69,10 @@ const EmployeeLogin: React.FC = () => {
       (async () => {
         try {
           const response = await EmployeeLoginApi(email, password);
-          if (response.status === 200 && response.data) {
-            const { token, id, position, employeeName } = response.data
+          console.log('[EmployeeLogin] login response:', response);
+          if (response.status === 200 && response.data?.data) {
+            const { token, id, position, employeeName } = response.data.data;
+            console.log('[EmployeeLogin] auth payload:', { token, id, position, employeeName });
             dispatch(setEmployeeAuth({ token, id, position, employeeName }));
 
             if (position === "mechanic") {
@@ -78,7 +80,8 @@ const EmployeeLogin: React.FC = () => {
             } else if (position === "coordinator") {
               navigate('/coordinator/dashboard');
             } else {
-              navigate('/employee/dashboard');
+              console.warn('[EmployeeLogin] unknown employee role, redirecting to login', position);
+              navigate('/employee-login');
             }
           } else {
             setFormState(prevState => ({
@@ -124,14 +127,8 @@ const EmployeeLogin: React.FC = () => {
           backgroundSize: '32px 32px'
         }}></div>
 
-        {/* Background image with placeholder */}
-        <img
-          src="/api/placeholder/1600/900"
-          alt="Solar panels on rooftop"
-          className="w-full h-full object-cover opacity-40"
-        />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-indigo-900/80 to-cyan-900/90"></div>
+        {/* Background gradient overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.45),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(34,211,238,0.35),_transparent_25%),linear-gradient(180deg,_rgba(15,23,42,0.95),_rgba(15,23,42,0.8))] opacity-90"></div>
       </div>
 
       {/* Floating icons animation */}
@@ -228,6 +225,7 @@ const EmployeeLogin: React.FC = () => {
               {/* Remember me & Forgot password */}
               <div className="flex items-center justify-between">
                 <button
+                  type="button"
                   onClick={handleReset}
                   className="text-sm font-medium text-blue-300 hover:text-blue-200 transition-colors relative group"
                 >

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ServerError, ValidationError } from '../../../domain/error/employeeErrors';
 import { ioInstance } from '../../../app';
 import { StatusCode } from '../../../shared/enums/statusCode';
+import { sendSuccess } from '../../../shared/response';
 import { SendVideoCallInvitationsUseCase } from '../../../Application/usecases/videocall/send-videocall-invitasion-usecase';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../types';
@@ -73,13 +74,11 @@ export class VideoCallController {
         });
       }
 
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: 'Video call invitations sent successfully',
+      sendSuccess(res, {
         data: result,
         adminName: initiatorName,
         participants,
-      });
+      }, 'Video call invitations sent successfully', StatusCode.OK);
     } catch (error) {
       next(error);
     }

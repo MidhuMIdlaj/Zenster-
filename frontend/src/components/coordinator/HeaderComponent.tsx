@@ -24,8 +24,8 @@ export default function Header({ userName, userRole, checkedIn, setCheckedIn, no
         <div className="flex items-center space-x-4">
           <div className="relative">
             <div className="rounded-full bg-white p-1">
-              <div className="rounded-full bg-indigo-500 w-12 h-12 flex items-center justify-center overflow-hidden">
-                <img src="/api/placeholder/48/48" alt="User" className="rounded-full" />
+              <div className="rounded-full bg-indigo-500 w-12 h-12 flex items-center justify-center text-white text-base font-bold">
+                {userName?.charAt(0) || 'C'}
               </div>
             </div>
             <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>

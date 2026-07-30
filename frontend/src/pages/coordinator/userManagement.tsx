@@ -172,12 +172,13 @@ const UserTable: React.FC = () => {
       setLoading(true);
 
       const response = await ClientListApi(page, itemsPerPage);
-      if (response && response.success) {
-        const mappedClients = response.clients.map(mapClientToUser);
+      const responseData = response?.data;
+      if (response && response.success && responseData) {
+        const mappedClients = responseData.clients.map(mapClientToUser);
 
         setUsers(mappedClients);
-        setTotalItems(response.total);
-        setTotalPages(response.totalPages);
+        setTotalItems(responseData.total);
+        setTotalPages(responseData.totalPages);
       }
     } catch (error) {
       console.error("Failed to fetch clients:", error);
@@ -204,12 +205,13 @@ const UserTable: React.FC = () => {
           itemsPerPage
         );
 
-        if (response && response.success) {
-          const mappedClients = response.clients.map(mapClientToUser);
+        const responseData = response?.data;
+        if (response && response.success && responseData) {
+          const mappedClients = responseData.clients.map(mapClientToUser);
 
           setUsers(mappedClients);
-          setTotalItems(response.total);
-          setTotalPages(response.totalPages);
+          setTotalItems(responseData.total);
+          setTotalPages(responseData.totalPages);
           setCurrentPage(1); // Reset to page 1 when searching
         }
       } catch (error) {

@@ -1,0 +1,352 @@
+/**
+ * Employee Management with Location Integration CSS
+ */
+
+.employee-management-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+/* Header */
+.employee-management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.header-title p {
+  margin: 5px 0 0 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* View Mode Buttons */
+.view-mode-buttons {
+  display: flex;
+  gap: 8px;
+  background: #f3f4f6;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.view-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.view-btn.active {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fee2e2;
+  border-left: 4px solid #dc2626;
+  padding: 15px;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.error-banner svg {
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+/* Content Sections */
+.employee-content-section,
+.employee-location-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+/* Employee List Wrapper */
+.employee-list-wrapper {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  flex: 1;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 30px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .employee-management-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .view-mode-buttons {
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .view-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .employee-management-container {
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .employee-management-header {
+    padding: 15px;
+  }
+
+  .header-title h1 {
+    font-size: 24px;
+  }
+
+  .header-title p {
+    font-size: 13px;
+  }
+
+  .modal-content {
+    padding: 20px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-management-container {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .employee-management-header {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .header-title h1 {
+    font-size: 20px;
+  }
+
+  .header-title p {
+    font-size: 12px;
+  }
+
+  .header-actions {
+    gap: 10px;
+  }
+
+  .view-mode-buttons {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .view-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+    padding: 15px;
+  }
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.employee-content-section,
+.employee-location-section {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 15px;
+  color: #9ca3af;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}

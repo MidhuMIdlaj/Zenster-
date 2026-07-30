@@ -11,6 +11,8 @@ interface EmployeeProtectedRouteProps {
 const EmployeeProtectedRoute = ({ children, allowedPositions }: EmployeeProtectedRouteProps) => {
   const { isAuthenticated, employeeData, loading } = useSelector(selectEmployeeAuthData);
 
+ 
+
   // Loading state
   if (loading) {
     return (
@@ -23,15 +25,23 @@ const EmployeeProtectedRoute = ({ children, allowedPositions }: EmployeeProtecte
     );
   }
 
-  if (!isAuthenticated || !employeeData) {
+  if (!isAuthenticated || !employeeData || !employeeData.position) {
+    console.warn('[EmployeeProtectedRoute] redirecting to login because auth is missing or invalid', {
+      isAuthenticated,
+      employeeData,
+    });
     return <Navigate to="/employee-login" replace />;
   }
 
-  if (allowedPositions && !allowedPositions.some(pos => 
-    employeeData.position.toLowerCase().includes(pos.toLowerCase()))) {
+  const position = employeeData.position?.toLowerCase();
+  if (allowedPositions && position && !allowedPositions.some(pos => 
+    position.includes(pos.toLowerCase()))) {
+    console.warn('[EmployeeProtectedRoute] unauthorized role for route', {
+      position,
+      allowedPositions,
+    });
     return <Navigate to="/unauthorized" replace />;
   }
-
 
   return <>{children}</>;
 };

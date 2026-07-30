@@ -55,9 +55,9 @@ export default class UserRepoImpl implements IUserRepository {
 
   async getCustomerEmails(): Promise<{ email: string; name: string }[]> {
     const users = await ClientModel.find({ isDeleted: false }, 'email clientName').lean();
-    return users.map((user: any) => ({
-      email: user.email,
-      name: user.clientName
+    return users.map((user: Record<string, unknown>) => ({
+      email: String(user.email ?? ''),
+      name: String(user.clientName ?? '')
     }));
   }
   async addProductsToClient(
@@ -101,15 +101,18 @@ export default class UserRepoImpl implements IUserRepository {
     async getClientById(id: string): Promise<Client | null> {
     const clientDoc = await ClientModel.findOne({_id : id});
     if (!clientDoc) return null;
-    const products: Product[] = clientDoc.products.map((p: any) => ({
-      id : p._id,
-      productName: p.productName,
-      quantity: p.quantity,
-      brand: p.brand,
-      model: p.model,
-      warrantyDate: p.warrantyDate,
-      guaranteeDate: p.guaranteeDate,
-    }));
+    const products: Product[] = (clientDoc.products as unknown[]).map((p) => {
+      const prod = p as Record<string, unknown>;
+      return {
+        id: String(prod._id ?? ''),
+        productName: String(prod.productName ?? ''),
+        quantity: String(prod.quantity ?? ''),
+        brand: String(prod.brand ?? ''),
+        model: String(prod.model ?? ''),
+        warrantyDate: prod.warrantyDate ? new Date(prod.warrantyDate as string) : new Date(0),
+        guaranteeDate: prod.guaranteeDate ? new Date(prod.guaranteeDate as string) : new Date(0),
+      } as Product;
+    });
 
     return new Client(
       clientDoc._id.toString(),
@@ -128,15 +131,18 @@ export default class UserRepoImpl implements IUserRepository {
   async getProductClientById(id: string): Promise<Client | null> {
     const clientDoc = await ClientModel.findOne({"products._id" : id});
     if (!clientDoc) return null;
-    const products: Product[] = clientDoc.products.map((p: any) => ({
-      id : p._id,
-      productName: p.productName,
-      quantity: p.quantity,
-      brand: p.brand,
-      model: p.model,
-      warrantyDate: p.warrantyDate,
-      guaranteeDate: p.guaranteeDate,
-    }));
+    const products: Product[] = (clientDoc.products as unknown[]).map((p) => {
+      const prod = p as Record<string, unknown>;
+      return {
+        id: String(prod._id ?? ''),
+        productName: String(prod.productName ?? ''),
+        quantity: String(prod.quantity ?? ''),
+        brand: String(prod.brand ?? ''),
+        model: String(prod.model ?? ''),
+        warrantyDate: prod.warrantyDate ? new Date(prod.warrantyDate as string) : new Date(0),
+        guaranteeDate: prod.guaranteeDate ? new Date(prod.guaranteeDate as string) : new Date(0),
+      } as Product;
+    });
 
     return new Client(
       clientDoc._id.toString(),
@@ -223,7 +229,7 @@ export default class UserRepoImpl implements IUserRepository {
   limit: number
 ): Promise<{ clients: Client[]; total: number }> {
   const skip = (page - 1) * limit;
-  const query: any = { isDeleted: false };
+    const query: Record<string, unknown> = { isDeleted: false };
 
   if (searchTerm) {
     const searchRegex = new RegExp(searchTerm, "i");

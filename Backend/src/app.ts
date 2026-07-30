@@ -19,6 +19,7 @@ import cookieParser from 'cookie-parser';
 import ChatRouter from './interfaces/Routers/common/chat-router';
 import VideoCallRouter from './interfaces/Routers/common/video-call-router';
 import VideoCallHistoryController from './interfaces/Routers/common/videocall-history-router';
+import LocationRouter from './interfaces/Routers/common/location-router';
 import ChatMessage from './infrastructure/db/models/chat.model';
 import jwt from 'jsonwebtoken';
 import path from 'path';
@@ -33,7 +34,25 @@ export let ioInstance: Server | undefined;
 // Middleware
 app.use(express.json());
 app.use(morgan('dev'));
-app.use(cors({ origin: config.clientUrl, credentials: true }));
+
+// Configure CORS to handle multiple origins
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    const allowedOrigins = config.clientUrl.split(',').map(url => url.trim());
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
@@ -59,10 +78,11 @@ export const getSocketInstance = (): Server => {
 
 export const setupSocket = (httpServer: HttpServer) => {
 
-  const allowedOrigins = [
-    config.clientUrl,
-    `http://localhost:${config.port}`
-  ].filter(Boolean);
+  const allowedOrigins = config.clientUrl
+    .split(',')
+    .map(url => url.trim())
+    .concat([`http://localhost:${config.port}`])
+    .filter(Boolean);
 
   const io = new Server(httpServer, {
     cors: {
@@ -231,6 +251,7 @@ app.use('/api/notification', NotificationRouter);
 app.use('/api/chat', ChatRouter);
 app.use('/api/video-call', VideoCallRouter);
 app.use('/api/video-call-history', VideoCallHistoryController);
+app.use('/api/location', LocationRouter);
 app.use('/uploads', express.static(path.join(__dirname, '../Uploads')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 

@@ -1,13 +1,14 @@
 import { useSelector } from 'react-redux';
+import { useMemo } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 const AdminProtectedRoute = () => {
   const location = useLocation();
-  const { isAuthenticated, isLoading, adminData } = useSelector((state: any) => ({
-    isAuthenticated: state.adminAuth?.isAuthenticated,
-    isLoading: state.adminAuth?.isLoading,
-    adminData: state.adminAuth?.adminData
-  }));
+  
+  // Select individual values to avoid object recreation on every render
+  const isAuthenticated = useSelector((state: any) => state.adminAuth?.isAuthenticated || false);
+  const isLoading = useSelector((state: any) => state.adminAuth?.isLoading || false);
+  const adminData = useSelector((state: any) => state.adminAuth?.adminData || null);
 
   if (!isLoading && !isAuthenticated && !adminData) {
     return <Navigate to="/admin-login" state={{ from: location }} replace />;

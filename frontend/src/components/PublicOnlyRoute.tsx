@@ -1,13 +1,16 @@
-import { Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { ReactNode, useEffect } from 'react';
 import { selectAdminAuthData, selectEmployeeAuthData } from '../store/selectors';
+import { clearEmployeeSession } from '../utils/authUtils';
 
 interface PublicOnlyRouteProps {
   children: ReactNode;
 }
 
 const PublicOnlyRoute = ({ children }: PublicOnlyRouteProps) => {
+  const location = useLocation();
+  const dispatch = useDispatch();
   const { isAuthenticated: isAdminAuthenticated, isLoading: isLoadingAdmin } = 
     useSelector(selectAdminAuthData);
   const { isAuthenticated: isEmployeeAuthenticated, employeeData } = 
@@ -24,11 +27,19 @@ const PublicOnlyRoute = ({ children }: PublicOnlyRouteProps) => {
     );
   }
 
-  if (isAdminAuthenticated) {
+  const isEmployeeResetPasswordPage = location.pathname.startsWith('/reset-password');
+
+  useEffect(() => {
+    if (isEmployeeResetPasswordPage) {
+      clearEmployeeSession();
+    }
+  }, [isEmployeeResetPasswordPage]);
+
+  if (isAdminAuthenticated && !isEmployeeResetPasswordPage) {
     return <Navigate to="/admin/dashboard" replace />;
   }
   
-  if (isEmployeeAuthenticated) {
+  if (isEmployeeAuthenticated && employeeData?.token && !isEmployeeResetPasswordPage) {
     const redirectPath = employeeData?.position === 'mechanic' 
       ? '/mechanic/dashboard' 
       : '/coordinator/dashboard';

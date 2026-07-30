@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 import dotenv from 'dotenv';
 import { generateAccessToken } from "../../../middleware/auth-middleware";
 import { StatusCode } from "../../../shared/enums/statusCode";
+import { sendError, sendResponse, sendSuccess } from "../../../shared/response";
 import UpdateProfileUseCase, { UpdateProfileInput } from "../../../Application/usecases/admin/update-profile-usecase";
 import FindAdminByIdUseCase from "../../../Application/usecases/admin/find-admin-by-id-usecase";
 import GetAllAdminsUseCase from "../../../Application/usecases/admin/get-all-admin-usecase";
@@ -50,7 +51,7 @@ adminLogin = async (req: Request, res: Response) => {
     const result = await this.loginAdminUseCase.execute(email, password);
 
     if (!result.success) {
-       res.status(result.statusCode || StatusCode.BAD_REQUEST).json(result);
+       sendResponse(res, { ...result, statusCode: result.statusCode || StatusCode.BAD_REQUEST });
        return
     }
 
@@ -78,13 +79,10 @@ adminLogin = async (req: Request, res: Response) => {
     req.session.save((err) => {
       if (err) {
         console.error("Session save error:", err);
-         res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-          success: false,
-          message: "Failed to save session"
-        });
+         sendError(res, "Failed to save session", StatusCode.INTERNAL_SERVER_ERROR);
         return
       }
-       res.status(result.statusCode || StatusCode.OK).json(result);
+       sendResponse(res, { ...result, statusCode: result.statusCode || StatusCode.OK });
        return
     });
 
@@ -92,7 +90,7 @@ adminLogin = async (req: Request, res: Response) => {
     console.error(err);
     const message = err instanceof Error ? err.message : "Something went wrong";
     if (!res.headersSent) {
-      res.status(StatusCode.BAD_REQUEST).json({ success: false, message });
+      sendError(res, message, StatusCode.BAD_REQUEST);
     }
   }
 };
@@ -104,18 +102,18 @@ adminLogin = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) {
-       res.status(StatusCode.UNAUTHORIZED).json({ message: "Refresh token is required" });
+       sendError(res, "Refresh token is required", StatusCode.UNAUTHORIZED);
        return
     }
 
     jwt.verify(refreshToken, process.env.JWT_SECRET!, async (err: unknown, decoded: TokenPayload) => {
       if (err) {
-         res.status(StatusCode.FORBIDDEN).json({ message: "Invalid refresh token" });
+         sendError(res, "Invalid refresh token", StatusCode.FORBIDDEN);
          return
       }
       const payload = decoded as TokenPayload;
       if (!payload.userId || !payload.role) {
-        res.status(StatusCode.FORBIDDEN).json({ message: "Invalid token payload" });
+        sendError(res, "Invalid token payload", StatusCode.FORBIDDEN);
         return
       }
 
@@ -137,20 +135,20 @@ adminLogin = async (req: Request, res: Response) => {
       if (payload.role === 'admin') {
         const admin = await AdminModel.findById(payload.userId);
         if (admin) {
-           res.json({
+           sendSuccess(res, {
             accessToken: newAccessToken,
             user: {
               email: admin.email,
               _id: admin._id,
               role: 'admin',
             },
-          });
+          }, 'Token refreshed successfully', StatusCode.OK);
           return
         }
       } else {
         const employee = await Employee.findById(payload.userId);
         if (employee) {
-           res.json({
+           sendSuccess(res, {
             accessToken: newAccessToken,
             user: {
               username: employee.employeeName,
@@ -161,20 +159,17 @@ adminLogin = async (req: Request, res: Response) => {
                 contactNumber: employee.contactNumber,
               },
             },
-          });
+          }, 'Token refreshed successfully', StatusCode.OK);
           return
         }
       }
 
-       res.status(StatusCode.BAD_REQUEST).json({ message: "User Not Found" });
+       sendError(res, "User Not Found", StatusCode.BAD_REQUEST);
        return
     });
   } catch (error) {
     console.log("Error in refreshToken controller:", error);
-     res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-      error: "Internal Server Error",
-      message: "Failed to process refreshToken request. Please try again later.",
-    });
+     sendError(res, "Failed to process refreshToken request. Please try again later.", StatusCode.INTERNAL_SERVER_ERROR);
     return
   }
 };
@@ -184,10 +179,10 @@ adminLogin = async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       await this.resetPasswordRequestUseCase.execute(email);
-      res.status(StatusCode.OK).json({ message: "OTP sent to email." });
+      sendSuccess(res, null, "OTP sent to email.", StatusCode.OK);
     } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
-    res.status(StatusCode.BAD_REQUEST).json({ message: errorMessage });
+    sendError(res, errorMessage, StatusCode.BAD_REQUEST);
    }
   };
 
@@ -195,11 +190,11 @@ adminLogin = async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       await this.resetPasswordRequestUseCase.execute(email);
-      res.status(StatusCode.OK).json({ message: "New OTP sent to email." });
+      sendSuccess(res, null, "New OTP sent to email.", StatusCode.OK);
     } catch (err: unknown) {
-   const message = err instanceof Error ? err.message : 'Something went wrong';
-   res.status(StatusCode.BAD_REQUEST).json({ message });
-  }
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      sendError(res, message, StatusCode.BAD_REQUEST);
+    }
   };
 
 
@@ -208,13 +203,13 @@ adminLogin = async (req: Request, res: Response) => {
       const { email, otp } = req.body;
       const isValid = await this.resetPasswordRequestUseCase.verifyOtp(email, otp);
       if (isValid) {
-        res.status(StatusCode.OK).json({ message: "OTP verified successfully." });
+        sendSuccess(res, null, "OTP verified successfully.", StatusCode.OK);
       } else {
-        res.status(StatusCode.BAD_REQUEST).json({ message: "Invalid OTP" });
+        sendError(res, "Invalid OTP", StatusCode.BAD_REQUEST);
       }
     }catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-    res.status(StatusCode.BAD_REQUEST).json({ message });
+    sendError(res, message, StatusCode.BAD_REQUEST);
    }
   }
  
@@ -222,10 +217,10 @@ adminLogin = async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       await this.resetPasswordUseCase.execute(email, password);
-      res.status(StatusCode.OK).json({ message: "Password reset successfully." });
+      sendSuccess(res, null, "Password reset successfully.", StatusCode.OK);
     } catch (err: unknown) {
      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-     res.status(StatusCode.BAD_REQUEST).json({ message });
+     sendError(res, message, StatusCode.BAD_REQUEST);
    }
   };
    
@@ -239,27 +234,19 @@ adminLogin = async (req: Request, res: Response) => {
 
       const { admins, total } = await this.getAllAdminsUseCase.execute(page, limit);
 
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: "Fetched admins successfully",
-        data: {
-          admins,
-          pagination: {
-            total,
-            totalPages: Math.ceil(total / limit),
-            currentPage: page,
-            limit
-          }
+      sendSuccess(res, {
+        admins,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+          limit
         }
-      });
+      }, "Fetched admins successfully", StatusCode.OK);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Server error while fetching admins";
       console.error("Error fetching admins:", message);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message,
-      data: null
-   });
+      sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR, undefined, null);
    }
   };
 
@@ -270,19 +257,13 @@ updatedProfile = async (req: Request, res: Response) => {
     const adminId = req.user?.userId;
 
     if (!adminId) {
-       res.status(StatusCode.UNAUTHORIZED).json({
-        success: false,
-        message: "Unauthorized access"
-      });
+       sendError(res, "Unauthorized access", StatusCode.UNAUTHORIZED);
       return
     }
 
     // Validate input
     if (!firstName && !lastName && !phoneNumber) {
-       res.status(StatusCode.BAD_REQUEST).json({
-        success: false,
-        message: "At least one field (firstName, lastName, or phoneNumber) is required"
-      });
+       sendError(res, "At least one field (firstName, lastName, or phoneNumber) is required", StatusCode.BAD_REQUEST);
       return
     }
 
@@ -298,29 +279,21 @@ updatedProfile = async (req: Request, res: Response) => {
 
     const updatedAdmin = await this.updateProfileUseCase.execute(adminId, updates);
 
-     res.status(StatusCode.OK).json({
-      success: true,
-      message: "Profile updated successfully",
-      data: {
-        admin: {
-          _id: updatedAdmin.id,
-          email: updatedAdmin.email,
-          firstName: updatedAdmin.firstName,
-          lastName: updatedAdmin.lastName,
-          phoneNumber: updatedAdmin.phoneNumber
-        }
+     sendSuccess(res, {
+      admin: {
+        _id: updatedAdmin.id,
+        email: updatedAdmin.email,
+        firstName: updatedAdmin.firstName,
+        lastName: updatedAdmin.lastName,
+        phoneNumber: updatedAdmin.phoneNumber
       }
-    });
+    }, "Profile updated successfully", StatusCode.OK);
     return
 
   } catch (err: unknown) {
   const message = err instanceof Error ? err.message : "Server error while updating profile";
   console.error("Error updating profile:", message);
-  res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-    success: false,
-    message,
-    data: null
-  });
+  sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR, undefined, null);
   return;
 }
 
@@ -331,19 +304,13 @@ updatedProfile = async (req: Request, res: Response) => {
     const adminIdHeader = req.headers['adminid'];
     
     if (!adminIdHeader) {
-       res.status(StatusCode.UNAUTHORIZED).json({
-        success: false,
-        message: "Admin ID header is missing"
-      })
+       sendError(res, "Admin ID header is missing", StatusCode.UNAUTHORIZED);
       return
     }
 
     const adminId = Array.isArray(adminIdHeader) ? adminIdHeader[0] : adminIdHeader;
     if (!adminId || typeof adminId !== 'string' || adminId.trim().length === 0) {
-       res.status(StatusCode.BAD_REQUEST).json({
-        success: false,
-        message: "Invalid admin ID format"
-      });
+       sendError(res, "Invalid admin ID format", StatusCode.BAD_REQUEST);
       return
     }
 
@@ -351,36 +318,25 @@ updatedProfile = async (req: Request, res: Response) => {
     const admin = await this.findAdminByIdUseCase.execute(adminId);
     
     if (!admin) {
-       res.status(StatusCode.NOT_FOUND).json({
-        success: false,
-        message: "Admin not found"
-      });
+       sendError(res, "Admin not found", StatusCode.NOT_FOUND);
       return
     }
 
-     res.status(StatusCode.OK).json({
-      success: true,
-      message: "Profile fetched successfully",
-      data: {
-        admin: {
-          _id: admin.id,
-          email: admin.email,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          phoneNumber: admin.phoneNumber
-        }
+     sendSuccess(res, {
+      admin: {
+        _id: admin.id,
+        email: admin.email,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        phoneNumber: admin.phoneNumber
       }
-    });
+    }, "Profile fetched successfully", StatusCode.OK);
     return
 
   }catch (err: unknown) {
   const message = err instanceof Error ? err.message : "Server error while fetching profile";
   console.error("Error fetching profile:", message);
-  res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-    success: false,
-    message,
-    data: null
-  });
+  sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR, undefined, null);
   return;
  }
 };

@@ -4,7 +4,9 @@ import Sidebar from '../../components/coordinator/sidebarComponent';
 import Header from '../../components/coordinator/HeaderComponent';
 import MobileNav from '../../components/coordinator/mobileNav';
 import { selectEmployeeAuthData } from '../../store/selectors';
-import { clearEmployeeAuth } from '../../store/EmployeeAuthSlice';
+import { resetLocationState } from '../../store/locationSlice';
+import { LocationTrackingService } from '../../services/location-tracking-service';
+import { clearEmployeeSession } from '../../utils/authUtils';
 import { useState, useEffect, useCallback } from 'react';
 import ConfirmationDialog from '../../components/reusableComponent/ConfirmationDialog';
 import { io, Socket } from 'socket.io-client';
@@ -224,8 +226,9 @@ const CoordinatorLayout = () => {
   useEffect(() => {
     if (!userId || !token) return;
 
-    const newSocket = io(import.meta.env.VITE_REACT_APP_BACKEND_URL || 'http://localhost:5000', {
-      transports: ['websocket'],
+    const newSocket = io(import.meta.env.VITE_REACT_APP_BACKEND_URL || undefined, {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'],
       auth: { token },
       withCredentials: true,
       reconnection: true,
@@ -382,7 +385,9 @@ const CoordinatorLayout = () => {
 
   const handleLogout = async () => {
     try {
-      await dispatch(clearEmployeeAuth());
+      await LocationTrackingService.getInstance().stopTracking();
+      await clearEmployeeSession();
+      dispatch(resetLocationState());
       navigate('/employee-login', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);

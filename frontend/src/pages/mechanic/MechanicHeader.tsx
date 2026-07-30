@@ -6,7 +6,9 @@ import { useSelector } from 'react-redux';
 import { selectEmployeeAuthData } from '../../store/selectors';
 import { NotificationService } from '../../api/NotificationService/NotificationService';
 import { useDispatch } from "react-redux";
-import { clearEmployeeAuth } from "../../store/EmployeeAuthSlice";
+import { resetLocationState } from "../../store/locationSlice";
+import { LocationTrackingService } from "../../services/location-tracking-service";
+import { clearEmployeeSession } from "../../utils/authUtils";
 
 interface HeaderProps {
   mechanicName: string;
@@ -90,9 +92,11 @@ const Header: React.FC<HeaderProps> = ({
     navigate('/mechanic/profile');
   };
 
- const handleLogout = () => {
-  dispatch(clearEmployeeAuth());
-  navigate("/employee/login"); // or your login route
+ const handleLogout = async () => {
+  await LocationTrackingService.getInstance().stopTracking();
+  await clearEmployeeSession();
+  dispatch(resetLocationState());
+  navigate("/employee-login", { replace: true });
 };
 
   return (

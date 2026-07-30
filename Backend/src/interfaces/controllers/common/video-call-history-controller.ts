@@ -1,6 +1,7 @@
 // src/controllers/videoCall/VideoCallHistoryController.ts
 import { Request, Response, NextFunction } from 'express';
 import { StatusCode } from '../../../shared/enums/statusCode';
+import { sendSuccess } from '../../../shared/response';
 import {  ValidationError } from '../../../domain/error/employeeErrors';
 import { VideoCallHistoryInput } from '../../../infrastructure/db/models/videocall.history.model';
 import { inject, injectable } from 'inversify';
@@ -45,11 +46,7 @@ export class VideoCallHistoryController {
 
     const createdRecord = await this.createCallRecordUseCase.execute(callRecord);
 
-    res.status(StatusCode.CREATED).json({
-      success: true,
-      message: 'Video call record created successfully',
-      data: createdRecord
-    });
+    sendSuccess(res, createdRecord, 'Video call record created successfully', StatusCode.CREATED);
         } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'A call with this room ID already exists') {
@@ -59,13 +56,12 @@ export class VideoCallHistoryController {
 
       if (
         typeof error === 'object' &&
-        error !== null &&
-        'name' in error &&
-        'code' in error &&
-        (error as any).name === 'MongoServerError' &&
-        (error as any).code === 11000
+        error !== null
       ) {
-        return next(new ValidationError('Duplicate key error - room ID must be unique'));
+        const e = error as Record<string, unknown>;
+        if (e['name'] === 'MongoServerError' && (e['code'] as number) === 11000) {
+          return next(new ValidationError('Duplicate key error - room ID must be unique'));
+        }
       }
 
       return next(error);
@@ -84,11 +80,7 @@ export class VideoCallHistoryController {
 
     const updatedRecord = await this.updateParticipantsUseCase.execute(roomId, participants);
 
-    res.status(StatusCode.OK).json({
-      success: true,
-      message: 'Participants updated successfully',
-      data: updatedRecord
-    });
+    sendSuccess(res, updatedRecord, 'Participants updated successfully', StatusCode.OK);
   } catch (error) {
     next(error);
   }
@@ -107,11 +99,7 @@ export class VideoCallHistoryController {
     }
 
     if (call.status === 'ended') {
-       res.status(200).json({
-        success: true,
-        message: 'Call already ended',
-        data: call,
-      });
+       sendSuccess(res, call, 'Call already ended', StatusCode.OK);
       return
     }
 
@@ -125,12 +113,7 @@ export class VideoCallHistoryController {
     call.duration = durationInSeconds;
 
     const updatedCall = await call.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Call ended successfully',
-      data: updatedCall,
-    });
+    sendSuccess(res, updatedCall, 'Call ended successfully', StatusCode.OK);
   } catch (error) {
     next(error);
   }
@@ -139,11 +122,7 @@ export class VideoCallHistoryController {
   getCallHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {
      const histories = await this.getCallHistoryUseCase.execute()
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: 'Video call history retrieved successfully',
-        data: histories,
-      });
+      sendSuccess(res, histories, 'Video call history retrieved successfully', StatusCode.OK);
     } catch (error) {
       next(error);
     }

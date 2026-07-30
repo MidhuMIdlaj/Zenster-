@@ -23,6 +23,8 @@ type AssignedMechanicDisplay = {
 };
 
 const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanics, coordinator: _coordinator, onClose }) => {
+  const mechanicsArray = Array.isArray(mechanics) ? mechanics : [];
+
   const getMechanicIdValue = (value: unknown): string | null => {
     if (!value) return null;
     if (typeof value === 'string') return value;
@@ -42,15 +44,18 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
     if (!complaint.assignedMechanicId) return [];
 
     if (typeof complaint.assignedMechanicId === 'string') {
+      const mech = mechanicsArray.find((mechanic) => {
+        const mechanicId = getMechanicIdValue((mechanic as unknown as Record<string, unknown>).mechanicId || (mechanic as unknown as Record<string, unknown>).id);
+        return mechanicId === complaint.assignedMechanicId;
+      });
+
       return [
         {
           mechanicId: complaint.assignedMechanicId,
           status: 'assigned',
           reason: null,
-          mechanicDetails: mechanics.find((mechanic) => {
-            const mechanicId = getMechanicIdValue((mechanic as unknown as Record<string, unknown>).mechanicId || (mechanic as unknown as Record<string, unknown>).id);
-            return mechanicId === complaint.assignedMechanicId;
-          })
+          mechanicDetails: mech || null,
+          mechanicName: mech?.employeeName || mech?.name || 'Unknown'
         }
       ];
     }
@@ -58,7 +63,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
     if (Array.isArray(complaint.assignedMechanicId)) {
       return complaint.assignedMechanicId.map((assignment) => {
         const rawMechanicId = getMechanicIdValue(assignment?.mechanicId);
-        const mechanic = mechanics.find((item) => {
+        const mechanic = mechanicsArray.find((item) => {
           const candidateIds = [
             getMechanicIdValue((item as unknown as Record<string, unknown>).mechanicId),
             getMechanicIdValue((item as unknown as Record<string, unknown>).id),
@@ -72,7 +77,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
           status: assignment.status || 'assigned',
           reason: assignment.reason ?? null,
           mechanicDetails: mechanic || null,
-          mechanicName: mechanic?.name || 'Unknown'
+          mechanicName: mechanic?.name || mechanic?.employeeName || 'Unknown'
         } satisfies AssignedMechanicDisplay;
       });
     }
@@ -81,6 +86,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
   };
 
   const assignedMechanics = getAssignedMechanics();
+  console.log('[FRONTEND] computedAssignedMechanics:', assignedMechanics);
 
   const formatDate = (date?: string | Date) => {
     if (!date) return 'N/A';
@@ -88,17 +94,44 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
     return parsedDate.toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
+  const getComplaintStatus = () => {
+    const statusField = complaint.status as unknown;
+    const statusString =
+      statusField && typeof statusField === 'object'
+        ? (statusField as { status?: string }).status
+        : typeof statusField === 'string'
+        ? statusField
+        : undefined;
+
+    if (complaint.workingStatus && complaint.workingStatus !== 'pending' && complaint.workingStatus !== 'active') {
+      if (!statusString || statusString.toLowerCase() !== complaint.workingStatus.toLowerCase()) {
+        return complaint.workingStatus;
+      }
+    }
+
+    return statusString || complaint.workingStatus || 'Unknown';
+  };
+
+  const complaintStatus = getComplaintStatus();
+
   const getStatusColor = (status?: string | StatusType) => {
     if (!status) return '#6B7280';
     const s = typeof status === 'string' ? status : status.status;
     switch (s.toLowerCase()) {
       case 'pending': return '#F59E0B';
       case 'processing': return '#3B82F6';
+      case 'in-progress': return '#3B82F6';
+      case 'accept': return '#3B82F6';
+      case 'accepted': return '#3B82F6';
       case 'completed': return '#10B981';
+      case 'rejected': return '#EF4444';
       case 'cancelled': return '#EF4444';
+      case 'assigned': return '#3B82F6';
       default: return '#6B7280';
     }
   };
+
+  const productName = complaint.productName || complaint.products?.[0]?.productName || 'Unknown Product';
 
   const getPriorityColor = (priority?: string) => {
     if (!priority) return 'bg-gray-100 text-gray-800';
@@ -119,13 +152,16 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
         </button>
       </div>
 
-      {/* Status & Priority */}
+      {/* Status, Priority & Product */}
       <div className="flex flex-wrap gap-3 mb-6">
-        <span className="px-4 py-2 rounded-full text-sm font-semibold" style={{ backgroundColor: getStatusColor(complaint.status) + '20', color: getStatusColor(complaint.status) }}>
-          Status: {complaint.status || complaint.status}
+        <span className="px-4 py-2 rounded-full text-sm font-semibold" style={{ backgroundColor: getStatusColor(complaintStatus) + '20', color: getStatusColor(complaintStatus) }}>
+          Status: {complaintStatus || 'Unknown'}
         </span>
         <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getPriorityColor(complaint.priority)}`}>
           {complaint.priority?.charAt(0).toUpperCase() + complaint.priority?.slice(1)} Priority
+        </span>
+        <span className="px-4 py-2 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-800">
+          Product: {productName}
         </span>
       </div>
 

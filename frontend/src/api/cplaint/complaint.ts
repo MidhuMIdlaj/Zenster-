@@ -44,7 +44,7 @@ export const getComplaintsByCoordinator = async () => {
         'Content-Type': 'application/json'
       }
     });
-    return response.data.complaints || []
+    return response.data?.data?.complaints || [];
   } catch (error) {
     console.error('Error fetching coordinator complaints:', error);
     throw error;
@@ -55,7 +55,18 @@ export const getComplaintsByCoordinator = async () => {
  
 export const fetchAvailableMechanics = async (): Promise<Mechanic[]> => {
   const response = await axiosInstance.get(`${API_URL}/available-mechanics`);
-  return response.data;
+  const mechanics = response.data?.data || response.data || [];
+  return Array.isArray(mechanics)
+    ? mechanics.map((mech: any) => ({
+        mechanicId: mech.mechanicId || mech.id || mech._id || '',
+        name: mech.employeeName || mech.name || 'Unknown',
+        employeeName: mech.employeeName || mech.name || 'Unknown',
+        specialization: Array.isArray(mech.fieldOfMechanic) ? mech.fieldOfMechanic.join(', ') : mech.fieldOfMechanic,
+        contactNumber: mech.contactNumber || mech.contact || '',
+        email: mech.emailId || mech.email || '',
+        workingStatus: mech.workingStatus,
+      }))
+    : [];
 };
 
 export const validateAdminCoordinatorEmail = async (email: string): Promise<any> => {
@@ -65,19 +76,21 @@ export const validateAdminCoordinatorEmail = async (email: string): Promise<any>
 
 
 export const createComplaint = async (complaintData: ComplaintFormData) => {
+  console.log('[API] createComplaint payload:', complaintData);
   const response = await axiosInstance.post(`${API_URL}/createComplaint`, complaintData);
+  console.log('[API] createComplaint response:', response.data);
   return response.data.data;
 };
 
  export const getAllComplaint = async () => {
   const response = await axiosInstance.get(`${API_URL}/getAllComplaint`);
-  return response.data.complaints;
+  return response.data?.data?.complaints || [];
 };
 
 export const fetchCustomerEmails = async () => {
   try {
     const response = await axiosInstance.get(`${API_URL}/customer-emails`);
-    return response.data.customers || [];
+    return response.data?.data?.customers || response.data?.customers || [];
   } catch (error) {
     console.error("Failed to fetch customer emails:", error);
     return [];
@@ -87,7 +100,7 @@ export const fetchCustomerEmails = async () => {
 export const fetchCoordinatorEmails = async () => {
   try {
     const response = await axiosInstance.get(`${API_URL}/coordinator-emails`);
-    return response.data.coordinators || [];
+    return response.data?.data?.coordinators || response.data?.coordinators || [];
   } catch (error) {
     console.error("Failed to fetch coordinator emails:", error);
     return [];
@@ -99,7 +112,8 @@ export const fetchCoordinatorEmails = async () => {
 export const getMechanicComplaints = async (mechanicId: string | undefined): Promise<Complaint[]> => {
   try {
     const response = await axiosInstance.get(`${API_URL}/getMechanicComplaint/${mechanicId}`);
-    return response.data.map((complaint: any) => ({
+    const complaints = response.data?.complaints || [];
+    return complaints.map((complaint: any) => ({
       ...complaint,
       contactNumber: complaint.contactNumber || '', 
     }));

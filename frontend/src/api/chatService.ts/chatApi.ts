@@ -9,14 +9,19 @@ export const ChatService = {
   getChatHistory: async (userId: string, receiverId: string) => {
     try {
       const response = await axiosInstance.get(`${API_BASE_URL}/history/${userId}/${receiverId}`);
-      return response.data;
+      const history = response.data?.data;
+      if (!Array.isArray(history)) {
+        console.warn('Unexpected chat history response shape:', response.data);
+        return [];
+      }
+      return history;
     } catch (error) {
       console.error('Error fetching chat history:', error);
       throw error;
     }
   },
 
-// Send a new message
+  // Send a new message
 sendMessage: async (messageData: any, files: File[] = []) => {
   try {
     const formData = new FormData();

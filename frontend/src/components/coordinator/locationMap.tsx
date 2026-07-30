@@ -6,7 +6,7 @@ export default function LocationMap() {
           <p className="text-sm text-gray-500">Real-time view of active users</p>
         </div>
         <div className="h-64 bg-indigo-50 rounded-lg relative overflow-hidden">
-          <img src="/api/placeholder/600/300" alt="Map" className="w-full h-full object-cover" />
+          <div className="w-full h-full bg-gradient-to-br from-indigo-200 via-cyan-100 to-slate-100" />
           
           {/* Animated Markers */}
           <div className="absolute top-1/4 left-1/4 flex flex-col items-center">

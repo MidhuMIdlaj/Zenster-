@@ -1,6 +1,7 @@
 // controllers/admin/EmployeeController.ts
 import { Request, Response, NextFunction, RequestHandler } from "express";
 import { StatusCode } from "../../../shared/enums/statusCode";
+import { sendError, sendResponse, sendSuccess } from "../../../shared/response";
 import { inject, injectable } from "inversify";
 import { TYPES } from "../../../types";
 import { ResponseDTO } from "../../../domain/dtos/Response";
@@ -9,6 +10,7 @@ import { ISoftDeleteEmployeeUseCase } from "../../../Application/interface/admin
 import { IEditEmployee } from "../../../Application/interface/admin/employee/edit-employee-usecase-interface";
 import { IGetAllEmployeesUseCase } from "../../../Application/interface/admin/employee/get-all-employee-usecase-interface";
 import IGetEmployeeProfileUseCase from "../../../Application/interface/admin/employee/get-employee-profile-usecase-interface";
+import IEmployeeRepository from '../../../domain/Repository/i-employee-repository';
 import { IUpdateEmployeeProfileUseCase } from "../../../Application/interface/admin/employee/update-employee-profile-usecase-interface";
 import ISearchEmployeesUseCase from "../../../Application/interface/admin/employee/search-employee-usecase-interface";
 
@@ -22,6 +24,7 @@ export default class EmployeeController {
     @inject(TYPES.dleEmployeeUsecases) private SoftDeleteEmployeeUseCase : ISoftDeleteEmployeeUseCase,
     @inject(TYPES.searchEmployeeUsecases) private searchEmployeeUsecases : ISearchEmployeesUseCase,
     @inject(TYPES.getEmployeeProfileUsecases) private getEmployeeProfileUsecases : IGetEmployeeProfileUseCase,
+    @inject(TYPES.IEmployeeRepository) private employeeRepository: IEmployeeRepository,
   ){}
 
   addEmployee = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -66,15 +69,9 @@ export default class EmployeeController {
       });
 
        if (result.success) {
-      res.status(StatusCode.CREATED).json({
-        message: result.message,
-        employee: result.data,
-      });
+      sendSuccess(res, { employee: result.data }, result.message, StatusCode.CREATED);
     } else {
-      res.status(result.statusCode).json({
-        message: result.message,
-        employee: null,
-      });
+      sendResponse(res, { success: false, statusCode: result.statusCode || StatusCode.BAD_REQUEST, message: result.message, data: null });
     }
     return;
     } catch (err: unknown) {
@@ -91,32 +88,12 @@ export default class EmployeeController {
     if (isNaN(limit)) throw new Error("Invalid limit");
     
     const result: ResponseDTO = await this.getAllEmployeesUseCase.execute(page, limit);
-    res.status(result.statusCode || StatusCode.OK).json(result);
+    sendResponse(res, { ...result, statusCode: result.statusCode || StatusCode.OK });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Server error while fetching employees";
-
-    res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message,
-      data: null,
-      statusCode: StatusCode.INTERNAL_SERVER_ERROR
-    } satisfies ResponseDTO); 
+    sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR);
   }
 };
-
-  updateStatus = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-       const employeeId = req.params.employeeId;
-      if(!employeeId){
-        throw new Error("the emplyee is not found")
-      }
-      const { status } = req.body;
-      await this.editEmployeeUsecases.execute(employeeId, status);
-      res.status(StatusCode.OK).json({ success: true, message: "Status updated" });
-    } catch (err) {
-      next(err);
-    }
-  };
 
 editEmployee = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -129,12 +106,12 @@ editEmployee = async (req: Request, res: Response, next: NextFunction) => {
 
     const updatedEmployee = await this.editEmployeeUsecases.execute(employeeId, updatedData);
 
-    if (!updatedEmployee) {
-       res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Employee not found" });
-       return
-    }
+     if (!updatedEmployee) {
+       sendError(res, "Employee not found", StatusCode.NOT_FOUND);
+       return;
+     }
 
-     res.status(StatusCode.OK).json({ success: true, employee: updatedEmployee });
+     sendSuccess(res, { employee: updatedEmployee }, "Employee updated successfully", StatusCode.OK);
      return 
   } catch (err) {
     next(err);
@@ -150,14 +127,14 @@ editEmployee = async (req: Request, res: Response, next: NextFunction) => {
       }
       const result = await this.SoftDeleteEmployeeUseCase.execute(employeeId);
       if (!result) {
-        res.status(StatusCode.NOT_FOUND).json({ message: "User not found or already deleted" });
+        sendError(res, "User not found or already deleted", StatusCode.NOT_FOUND);
         return;
       }
-      res.status(StatusCode.OK).json({ message: "User soft deleted successfully" });
+      sendSuccess(res, null, "User soft deleted successfully", StatusCode.OK);
     } catch (error: unknown) {
      const errorMessage = error instanceof Error ? error.message : "Internal server error";
      console.error("Error soft deleting user:", errorMessage);
-     res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ message: errorMessage });
+     sendError(res, errorMessage, StatusCode.INTERNAL_SERVER_ERROR);
    }
   };
    
@@ -175,56 +152,33 @@ editEmployee = async (req: Request, res: Response, next: NextFunction) => {
         page,
         limit
       });
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: "Searched employees successfully",
-        employees,
-        total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page
-      });
+      sendSuccess(res, { employees, total, totalPages: Math.ceil(total / limit), currentPage: page }, "Searched employees successfully", StatusCode.OK);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error searching employees:", errorMessage);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-    success: false,
-    message: "Server error while searching employees"
-    });
+      sendError(res, "Server error while searching employees", StatusCode.INTERNAL_SERVER_ERROR);
    }
  };
 
  getEmployeeProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const employeeId = req.user?.userId;
-      if (!employeeId) {
-         res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Employee ID is required"
-        });
-        return
-      }
+       if (!employeeId) {
+          sendError(res, "Employee ID is required", StatusCode.BAD_REQUEST);
+          return;
+        }
 
       const employee = await this.getEmployeeProfileUsecases.execute(employeeId);
 
       if (!employee) {
-         res.status(StatusCode.NOT_FOUND).json({
-          success: false,
-          message: "Employee not found"
-        });
-        return
+        sendError(res, "Employee not found", StatusCode.NOT_FOUND);
+        return;
       }
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: "Employee profile retrieved successfully",
-        data: employee
-      });
+      sendSuccess(res, employee, "Employee profile retrieved successfully", StatusCode.OK);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error getting employee profile:", errorMessage);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: "Failed to get employee profile"
-      });
+      sendError(res, "Failed to get employee profile", StatusCode.INTERNAL_SERVER_ERROR);
     }
   };
 
@@ -234,19 +188,13 @@ editEmployee = async (req: Request, res: Response, next: NextFunction) => {
        const employeeId = req.user?.userId;
       const { employeeName, contactNumber, address, age } = req.body;
       if (!employeeId) {
-         res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Employee ID is required"
-        });
-        return
+        sendError(res, "Employee ID is required", StatusCode.BAD_REQUEST);
+        return;
       }
 
       if (!employeeName || !contactNumber || !address || !age) {
-         res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "All fields are required"
-        });
-        return
+        sendError(res, "All fields are required", StatusCode.BAD_REQUEST);
+        return;
       }
 
       const updatedEmployee = await this.UpdateEmployeeProfileUseCase.execute(
@@ -255,24 +203,44 @@ editEmployee = async (req: Request, res: Response, next: NextFunction) => {
       );
 
       if (!updatedEmployee) {
-         res.status(StatusCode.NOT_FOUND).json({
-          success: false,
-          message: "Employee not found"
-        });
-        return
+        sendError(res, "Employee not found", StatusCode.NOT_FOUND);
+        return;
       }
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: "Profile updated successfully",
-        data: updatedEmployee
-      });
+      sendSuccess(res, updatedEmployee, "Profile updated successfully", StatusCode.OK);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error updating employee profile:", errorMessage);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: "Failed to update employee profile"
-      });
+      sendError(res, "Failed to update employee profile", StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  };
+
+  updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { employeeId } = req.params;
+      const { status } = req.body;
+
+      if (!employeeId) {
+        sendError(res, 'Employee ID is required', StatusCode.BAD_REQUEST);
+        return;
+      }
+
+      if (status !== 'active' && status !== 'inactive') {
+        sendError(res, 'Invalid status value', StatusCode.BAD_REQUEST);
+        return;
+      }
+
+      try {
+        await this.employeeRepository.updateStatus(employeeId, status);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to update status';
+        sendError(res, message, StatusCode.NOT_FOUND);
+        return;
+      }
+
+      sendSuccess(res, null, 'Employee status updated', StatusCode.OK);
+      return;
+    } catch (err: unknown) {
+      next(err);
     }
   };
 }

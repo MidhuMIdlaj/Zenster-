@@ -12,6 +12,8 @@ import { IComplaintRepoReturn } from '../../domain/dtos/complaint-usecase/create
 import { IGetComplaintMechanicUsecase } from '../../domain/dtos/complaint-usecase/get-mechanic-complaint-usecase-interface';
 import { IComplaint } from '../../domain/complaint/type';
 
+type UnknownRecord = Record<string, unknown>;
+
 export default class ComplaintRepoImpl implements IComplaintRepository {
   async createComplaint(
     customerName: string,
@@ -258,8 +260,11 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
         {
           $set: {
             "assignedMechanics.0.mechanicId": mechanicId,
-            workingStatus: "progress",
-            status: "Assigned",
+            "assignedMechanics.0.status": "accept",
+            workingStatus: "processing",
+            "status.status": "processing",
+            "status.updatedAt": new Date(),
+            "status.updatedBy": mechanicId,
           },
         },
         { new: true }
@@ -468,41 +473,68 @@ export default class ComplaintRepoImpl implements IComplaintRepository {
 
   private mapToComplaint(doc: any): IComplaintRepoReturn {
     return {
-      id: doc._id.toString(),
-      complaintNumber: doc.complaintNumber,
-      customerEmail: doc.customerEmail,
-      customerPhone: doc.customerPhone,
-      description: doc.description,
-      assignedMechanicId: doc.assignedMechanics?.map((assignment: any) => ({
-        mechanicId: assignment.mechanicId?._id || assignment.mechanicId,
-        status: assignment.status,
-        reason: assignment.reason || null
-      })) || [],
-      createdBy: doc.createdBy,
-      status: doc.status?.status || 'active',
-      priority: doc.priority || 'medium',
-      customerName: doc.customerName,
-      notes: doc.notes || '',
-      productName: doc.productName || '',
-      address: doc.address || '',
-      model: doc.productModel || '',
-      guaranteeDate: doc.guaranteeDate,
-      warrantyDate: doc.warrantyDate,
-      CreatedByRole: doc.CreatedByRole || 'customer',
-      createdAt: doc.createdAt || new Date(),
-      updatedAt: doc.updatedAt || new Date(),
-      workingStatus: doc.workingStatus || 'pending',
-      rejectionReason: doc.rejectionReason,
-      isDeleted: doc.isDeleted === 'true' ? true : false,
-      completionDetails: doc.completionDetails
+      id: String((doc as UnknownRecord)?._id ?? ''),
+      complaintNumber: Number((doc as any)?.complaintNumber ?? 0),
+      customerEmail: String((doc as UnknownRecord)?.customerEmail ?? ''),
+      customerPhone: String((doc as UnknownRecord)?.customerPhone ?? ''),
+      description: String((doc as UnknownRecord)?.description ?? ''),
+      assignedMechanicId: ((doc as UnknownRecord)?.assignedMechanics as unknown[] | undefined)?.map((assignment) => {
+        const a = assignment as UnknownRecord;
+        const rawMech = (a.mechanicId as unknown) as UnknownRecord | string | undefined;
+        let mechanicObjectId: mongoose.Types.ObjectId | string = '';
+        if (rawMech && typeof rawMech === 'object') {
+          mechanicObjectId = String((rawMech as UnknownRecord)._id ?? (rawMech as UnknownRecord).id ?? '');
+        } else if (typeof rawMech === 'string') {
+          mechanicObjectId = rawMech;
+        }
+        try {
+          mechanicObjectId = new mongoose.Types.ObjectId(String(mechanicObjectId));
+        } catch (e) {
+          // fallback keep as string if cannot convert
+        }
+
+        const mechName = rawMech && typeof rawMech === 'object' ? String((rawMech as UnknownRecord).employeeName ?? (rawMech as UnknownRecord).name ?? '') : null;
+
+        return {
+          mechanicId: mechanicObjectId as mongoose.Types.ObjectId,
+          status: (a.status as string) ?? 'pending',
+          reason: (a.reason as string) || null,
+          mechanicName: mechName,
+          mechanicDetails: rawMech && typeof rawMech === 'object'
+            ? {
+                id: ((rawMech as UnknownRecord)._id as any) ?? ((rawMech as UnknownRecord).id as any),
+                employeeName: String((rawMech as UnknownRecord).employeeName ?? (rawMech as UnknownRecord).name ?? ''),
+                emailId: String((rawMech as UnknownRecord).emailId ?? (rawMech as UnknownRecord).email ?? ''),
+                contactNumber: String((rawMech as UnknownRecord).contactNumber ?? (rawMech as UnknownRecord).contact ?? ''),
+              }
+            : null
+        } as any;
+      }) || [],
+      createdBy: String((doc as UnknownRecord)?.createdBy ?? ''),
+      priority: ((String((doc as UnknownRecord)?.priority ?? 'medium')) as 'low' | 'medium' | 'high' | 'critical'),
+      customerName: String((doc as UnknownRecord)?.customerName ?? ''),
+      notes: String((doc as UnknownRecord)?.notes ?? ''),
+      productName: String((doc as UnknownRecord)?.productName ?? ''),
+      address: String((doc as UnknownRecord)?.address ?? ''),
+      model: String((doc as UnknownRecord)?.productModel ?? ''),
+      guaranteeDate: (doc as UnknownRecord)?.guaranteeDate as Date | string,
+      warrantyDate: (doc as UnknownRecord)?.warrantyDate as Date | string,
+      CreatedByRole: ((String((doc as UnknownRecord)?.CreatedByRole ?? 'customer')) as 'admin' | 'technician' | 'customer'),
+      createdAt: (doc as any)?.createdAt ?? new Date(),
+      updatedAt: (doc as any)?.updatedAt ?? new Date(),
+      status: (String(((doc as UnknownRecord)?.status as any)?.status ?? (doc as UnknownRecord)?.status ?? (doc as UnknownRecord)?.workingStatus ?? 'pending')) as 'active' | 'completed' | 'cancelled' | 'on-hold',
+      workingStatus: (String((doc as any)?.workingStatus ?? ((doc as any)?.status && (doc as any)?.status['status']) ?? 'pending')) as 'pending' | 'in-progress' | 'completed' | 'rejected',
+      rejectionReason: (doc as UnknownRecord)?.rejectionReason as string | undefined,
+      isDeleted: Boolean((doc as UnknownRecord)?.isDeleted === true || String((doc as UnknownRecord)?.isDeleted) === 'true'),
+      completionDetails: (doc as UnknownRecord)?.completionDetails
         ? {
-          description: doc.completionDetails.description || '',
-          photos: doc.completionDetails.photos || [],
-          completedAt: doc.completionDetails.completedAt,
-          completedBy: doc.completionDetails.completedBy || '',
-          paymentStatus: doc.completionDetails.paymentStatus || '',
-          amount: doc.completionDetails.amount || 0,
-          paymentMethod: doc.completionDetails.paymentMethod || ''
+          description: String(((doc as UnknownRecord).completionDetails as UnknownRecord).description || ''),
+          photos: Array.isArray(((doc as UnknownRecord).completionDetails as UnknownRecord).photos) ? (((doc as UnknownRecord).completionDetails as UnknownRecord).photos as string[]) : [],
+          completedAt: ((doc as any).completionDetails as any).completedAt as Date | string,
+          completedBy: String(((doc as UnknownRecord).completionDetails as UnknownRecord).completedBy || ''),
+          paymentStatus: String(((doc as UnknownRecord).completionDetails as UnknownRecord).paymentStatus || ''),
+          amount: Number(((doc as UnknownRecord).completionDetails as UnknownRecord).amount || 0),
+          paymentMethod: String(((doc as UnknownRecord).completionDetails as UnknownRecord).paymentMethod || '')
         }
         : undefined
     };

@@ -47,6 +47,9 @@ interface Config {
   awsSecretAccessKey: string;
   awsRegion: string;
   awsBucketName: string;
+
+  // Google Maps Configuration
+  googleMapsApiKey: string;
 }
 
 class Environment {
@@ -117,6 +120,9 @@ class Environment {
       awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
       awsRegion: process.env.AWS_REGION || '',
       awsBucketName: process.env.AWS_BUCKET_NAME || '',
+
+      // Google Maps Configuration
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
     };
   }
 
@@ -153,6 +159,10 @@ class Environment {
   hasEmailConfig(): boolean {
     return !!(this.config.emailUser && this.config.emailPass) || 
            (this.config.emailService === 'resend' && !!this.config.resendApiKey);
+  }
+
+  hasGoogleMapsConfig(): boolean {
+    return !!this.config.googleMapsApiKey;
   }
 }
 

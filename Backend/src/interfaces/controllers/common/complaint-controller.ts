@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCode } from '../../../shared/enums/statusCode';
+import { sendError, sendResponse, sendSuccess } from '../../../shared/response';
 import GetCustomerEmails from '../../../Application/usecases/admin/Users/get-customer-email-usecase';
 import GetCoordinatorEmails from '../../../Application/usecases/employee/get-coordinator-email-usecase';
 import { inject, injectable } from 'inversify';
@@ -50,13 +51,13 @@ export default class ComplaintController {
     try {
       const result = await this.createComplaintUseCase.execute(req.body);
       if (result.success) {
-        res.status(StatusCode.CREATED).json(result.data);
+        sendSuccess(res, result.data, 'Complaint created successfully', StatusCode.CREATED);
       } else {
-        res.status(StatusCode.BAD_REQUEST).json({ error: result.error });
+        sendError(res, result.error || 'Failed to create complaint', StatusCode.BAD_REQUEST);
       }
     } catch (error) {
       console.error('🚑 Server error:', error);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' });
+      sendError(res, 'Internal server error', StatusCode.INTERNAL_SERVER_ERROR);
     }
   };
   
@@ -64,29 +65,24 @@ export default class ComplaintController {
     try {
       const { email } = req.body;
       if (!email) {
-        res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Email is required"
-        });
+        sendError(res, "Email is required", StatusCode.BAD_REQUEST);
         return;
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Invalid email format"
-        });
+        sendError(res, "Invalid email format", StatusCode.BAD_REQUEST);
         return;
       }
 
       const customer = await this.findCustomerByEmailUseCase.execute(email);
       if (!customer) {
-        res.status(StatusCode.OK).json({
+        sendResponse(res, {
           success: true,
-          exists: false,
+          statusCode: StatusCode.OK,
           message: "Customer not found",
-          data: null
+          data: null,
+          exists: false
         });
         return;
       }
@@ -104,11 +100,12 @@ export default class ComplaintController {
         products: customer.data?.products || []
       };
 
-      res.status(StatusCode.OK).json({
+      sendResponse(res, {
         success: true,
-        exists: true,
+        statusCode: StatusCode.OK,
         message: "Customer found",
-        data: responseData
+        data: responseData,
+        exists: true
       });
     } catch (err) {
       next(err);
@@ -124,75 +121,69 @@ export default class ComplaintController {
         specialization: mech.experience ? `${mech.experience} years experience` : 'Mechanic',
         contactNumber: mech.contactNumber,
         email: mech.emailId,
-        workingStatus : mech.workingStatus
+        workingStatus: mech.workingStatus
       }));
 
-      res.status(StatusCode.OK).json(mechanicsDto);
+      sendSuccess(res, mechanicsDto, 'Available mechanics retrieved successfully', StatusCode.OK);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("Error fetching available mechanics:", errorMessage);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-        success: false,
-        message: "Error fetching available mechanics",
-        error: errorMessage
-      });
+      sendError(res, "Error fetching available mechanics", StatusCode.INTERNAL_SERVER_ERROR, errorMessage);
     }
   }
 
   validateAdminCoordinatorEmail = async (req: Request, res: Response) => {
     try {
-     const { email } = req.body;
+      const { email } = req.body;
       if (!email) {
-         res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Email is required"
-        })
-        return
+        sendError(res, "Email is required", StatusCode.BAD_REQUEST);
+        return;
       }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      const emailRegex = /^[^\s@]+@[^^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-         res.status(StatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Invalid email format"
-        })
-        return
+        sendError(res, "Invalid email format", StatusCode.BAD_REQUEST);
+        return;
       }
+
       const result = await this.validateAdminCoordinatorUseCase.execute(email);
       if (!result.isValid) {
-         res.status(StatusCode.OK).json({
+        sendResponse(res, {
           success: true,
-          isValid: false,
+          statusCode: StatusCode.OK,
           message: "Email does not belong to an admin or coordinator",
-          user: null,
-        })
-         return
+          data: null,
+          isValid: false
+        });
+        return;
       }
-       res.status(StatusCode.OK).json({
+
+      sendResponse(res, {
         success: true,
-        isValid: true,
-        userType: result.userType,
+        statusCode: StatusCode.OK,
         message: `Valid ${result.userType} email`,
-        user: result.user,
-        id : result.id
-      })
-      return
-      
+        data: {
+          userType: result.userType,
+          user: result.user,
+          id: result.id
+        },
+        isValid: true
+      });
+      return;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error occurred";
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message
-      });
+      sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR);
       return;
     }
   };
 
-  getAllComplaints = async (req: Request, res : Response)=>{
+  getAllComplaints = async (req: Request, res : Response) => {
     try {
-      const complaints = await this.getAllComplaintsUseCase.execute()
-      res.status(StatusCode.OK).json({ success: true, complaints });
-    } catch (error) {
-      console.error("error from get Complaint :", error)
+      const complaints = await this.getAllComplaintsUseCase.execute();
+      sendSuccess(res, { complaints }, 'Complaints retrieved successfully', StatusCode.OK);
+    } catch (error: unknown) {
+      console.error("error from get Complaint :", error);
+      sendError(res, 'Failed to fetch complaints', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -200,10 +191,10 @@ export default class ComplaintController {
     try {
       const { id } = req.params;
       const complaints = await this.getMechanicComplaintUseCase.execute(id);
-      res.status(StatusCode.OK).json(complaints);
-    } catch (error) {
+      sendSuccess(res, { complaints }, 'Mechanic complaints retrieved successfully', StatusCode.OK);
+    } catch (error: unknown) {
       console.error(error);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ error: "Failed to fetch complaints" });
+      sendError(res, 'Failed to fetch complaints', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -214,88 +205,66 @@ export default class ComplaintController {
     const { mechanicId } = req.body;
     
     if (!mechanicId) {
-      res.status(StatusCode.BAD_REQUEST).json({ error: 'Mechanic ID is required' })
-      return
-    }
-    const mechanic = await this.getEmployeeProfileUsecases.execute(mechanicId);
-    if (!mechanic) {
-      res.status(StatusCode.NOT_FOUND).json({ error: 'Mechanic not found' });
+      sendError(res, 'Mechanic ID is required', StatusCode.BAD_REQUEST);
       return;
     }
+
+    const mechanic = await this.getEmployeeProfileUsecases.execute(mechanicId);
+    if (!mechanic) {
+      sendError(res, 'Mechanic not found', StatusCode.NOT_FOUND);
+      return;
+    }
+
     console.log('Mechanic working status:', mechanic);
     if (mechanic.workingStatus !== 'Available') {
-      res.status(StatusCode.BAD_REQUEST).json({ 
-        error: 'Cannot accept new tasks. Mechanic is currently occupied with another task.',
-        mechanicStatus: mechanic.workingStatus 
-      });
+      sendError(res, 'Cannot accept new tasks. Mechanic is currently occupied with another task.', StatusCode.BAD_REQUEST, undefined, { mechanicStatus: mechanic.workingStatus });
       return;
     }
     const result = await this.acceptComplaintUseCase.execute(id, mechanicId);
     if (!result.success) {
-      res.status(StatusCode.BAD_REQUEST).json({ error: result.message });
+      sendError(res, result.message || 'Failed to accept complaint', StatusCode.BAD_REQUEST);
       return;
     }
-
-    res.status(StatusCode.OK).json(result);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to accept complaint';
-      console.error('Error in acceptComplaint:', message);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-        error: message
-      });
-    }
+    sendSuccess(res, result, 'Complaint accepted successfully', StatusCode.OK);
+   } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to accept complaint';
+    console.error('Error in acceptComplaint:', message);
+    sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR);
+  }
 }
 
    getCustomerEmails = async (_req: Request, res: Response) => {
     try {
       const customers = await this.getCustomerEmailsUsecases.execute();
-      res.status(StatusCode.OK).json({ 
-        success: true,
-        customers 
-      });
-    } catch (error) {
+      sendSuccess(res, { customers }, 'Customer emails retrieved successfully', StatusCode.OK);
+    } catch (error: unknown) {
       console.error(error);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-        success: false,
-        error: "Failed to fetch customer emails" 
-      });
+      sendError(res, 'Failed to fetch customer emails', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
-  getComplaintsByCoordinator  = async(req: Request, res: Response) => {
+  getComplaintsByCoordinator = async (req: Request, res: Response) => {
     try {
       const userId = req.user?.userId;
       if (!userId) {
-        res.status(StatusCode.BAD_REQUEST).json({ error: 'User ID is required' });
+        sendError(res, 'User ID is required', StatusCode.BAD_REQUEST);
         return;
       }
       const complaints = await this.GetComplaintsAssignedToMechanic.execute(userId);
-      
-      res.status(StatusCode.OK).json({
-        success: true,
-        complaints
-      });
-    } catch (error) {
+      sendSuccess(res, { complaints }, 'Complaints fetched successfully', StatusCode.OK);
+    } catch (error: unknown) {
       console.error('Error fetching complaints by coordinator:', error);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-        error: 'Failed to fetch complaints by coordinator' 
-      });
+      sendError(res, 'Failed to fetch complaints by coordinator', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
   getCoordinatorEmails = async (_req: Request, res: Response) => {
     try {
       const coordinators = await this.getCoordinatorEmailsUsecases.execute();
-      res.status(StatusCode.OK).json({ 
-        success: true,
-        coordinators 
-      });
-    } catch (error) {
+      sendSuccess(res, { coordinators }, 'Coordinator emails retrieved successfully', StatusCode.OK);
+    } catch (error: unknown) {
       console.error(error);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-        success: false,
-        error: "Failed to fetch coordinator emails" 
-      });
+      sendError(res, 'Failed to fetch coordinator emails', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -305,17 +274,17 @@ rejectComplaint = async (req: Request, res: Response) => {
     const { mechanicId, reason } = req.body;
 
     if (!mechanicId || !reason?.trim()) {
-       res.status(400).json({ error: 'Mechanic ID and reason are required' });
-       return;
+      sendError(res, 'Mechanic ID and reason are required', StatusCode.BAD_REQUEST);
+      return;
     }
+
     const result = await this.rejectComplaintUsecase.execute(id, mechanicId, reason);
-    res.status(200).json(result);
-    
-      } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to reject complaint';
-      console.error('Error in rejectComplaint:', message);
-      res.status(500).json({ error: message });
-    }
+    sendSuccess(res, result, 'Complaint rejected successfully', StatusCode.OK);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to reject complaint';
+    console.error('Error in rejectComplaint:', message);
+    sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR);
+  }
 }
 
   ChangeStatus = async (req: Request, res: Response) => {
@@ -323,24 +292,19 @@ rejectComplaint = async (req: Request, res: Response) => {
       const { id } = req.params; 
       const { newStatus, updatedBy } = req.body;
       if (!newStatus) {
-         res.status(StatusCode.BAD_REQUEST).json({ error: 'Status is required in payload' })
-         return
+        sendError(res, 'Status is required in payload', StatusCode.BAD_REQUEST);
+        return;
       }
       const result = await this.ChangeStatusUseCase.execute(id, newStatus, updatedBy);
       if (result.matchedCount === 0) {
-         res.status(StatusCode.NOT_FOUND).json({ error: 'Complaint not found or not assigned to this mechanic' })
-         return
+        sendError(res, 'Complaint not found or not assigned to this mechanic', StatusCode.NOT_FOUND);
+        return;
       }
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: 'Status updated successfully',
-        data: result
-      });
-      
+      sendSuccess(res, { data: result }, 'Status updated successfully', StatusCode.OK);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to update complaint status';
       console.error('Error in ChangeStatus:', message);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ error: message });
+      sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -349,65 +313,49 @@ rejectComplaint = async (req: Request, res: Response) => {
       const { id } = req.params;
       const result = await this.deleteComplaintUseCase.execute(id);
       if (result.matchedCount === 0) {
-          res.status(StatusCode.NOT_FOUND).json({ error: 'Complaint not found' });
-          return;
+        sendError(res, 'Complaint not found', StatusCode.NOT_FOUND);
+        return;
       }
-      res.status(StatusCode.OK).json({
-          success: true,
-          message: 'Complaint deleted successfully',
-          data: result
-      });
-      
-   } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to delete complaint';
-      console.error('Error in deleteComplaint:', message);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ error: message });
-    }
+      sendSuccess(res, { data: result }, 'Complaint deleted successfully', StatusCode.OK);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete complaint';
+    console.error('Error in deleteComplaint:', message);
+    sendError(res, message, StatusCode.INTERNAL_SERVER_ERROR);
+   }
   }
 
   updateComplaint = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const {status , mechanicId} = req.body;
+      const { status, mechanicId } = req.body;
       if (!id) {
-        res.status(StatusCode.BAD_REQUEST).json({ error: 'Complaint ID is required' });
+        sendError(res, 'Complaint ID is required', StatusCode.BAD_REQUEST);
         return;
       }
       const updatedComplaint = await this.updateComplaintStatusUsecase.execute(id, status, mechanicId);
       if (!updatedComplaint) {
-        res.status(StatusCode.NOT_FOUND).json({ error: 'Complaint not found' });
+        sendError(res, 'Complaint not found', StatusCode.NOT_FOUND);
         return;
       }
-      res.status(StatusCode.OK).json({
-        success: true,
-        message: 'Complaint updated successfully',
-        data: updatedComplaint
-      });       
-       
-    } catch (error) {
+      sendSuccess(res, { data: updatedComplaint }, 'Complaint updated successfully', StatusCode.OK);
+    } catch (error: unknown) {
       console.error('Error in updateComplaint:', error);
-      res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-        error: (error instanceof Error ? error.message : 'Failed to update complaint')
-      });
+      sendError(res, (error instanceof Error ? error.message : 'Failed to update complaint'), StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
 completeTask = async (req: Request, res: Response) => {
   try {
-    const { taskId, mechanicId, description , paymentStatus, amount , paymentMethod, isUnderWarranty } = req.body;
+    const { taskId, mechanicId, description, paymentStatus, amount, paymentMethod, isUnderWarranty } = req.body;
     const files = req.files as Express.Multer.File[];
     const underWarranty = isUnderWarranty === true || isUnderWarranty === 'true';
     if (!taskId || !mechanicId || !description) {
-       res.status(StatusCode.BAD_REQUEST).json({ 
-        error: 'Task ID, mechanic ID, and description are required' 
-      });
-      return
+      sendError(res, 'Task ID, mechanic ID, and description are required', StatusCode.BAD_REQUEST);
+      return;
     }
     if (!underWarranty && (!paymentMethod || !paymentStatus || amount === undefined || amount === null || Number(amount) <= 0)) {
-       res.status(StatusCode.BAD_REQUEST).json({ 
-        error: 'Payment status, amount, and method are required for non-warranty tasks' 
-      });
-      return
+      sendError(res, 'Payment status, amount, and method are required for non-warranty tasks', StatusCode.BAD_REQUEST);
+      return;
     }
     let photoUrls: string[] = [];
     for (const file of files || []) {
@@ -426,21 +374,14 @@ completeTask = async (req: Request, res: Response) => {
     );
 
     if (!completedTask) {
-       res.status(StatusCode.NOT_FOUND).json({ error: 'Task not found' });
-       return
+      sendError(res, 'Task not found', StatusCode.NOT_FOUND);
+      return;
     }
     console.log('Completed Task:', completedTask);
-    res.status(StatusCode.OK).json({
-      success: true,
-      message: 'Task completed successfully',
-      data: completedTask
-    });
-
-  } catch (error) {
+    sendSuccess(res, { data: completedTask }, 'Task completed successfully', StatusCode.OK);
+  } catch (error: unknown) {
     console.error('Error in completeTask:', error);
-    res.status(StatusCode.INTERNAL_SERVER_ERROR).json({ 
-      error: (error instanceof Error ? error.message : 'Failed to complete task')
-    });
+    sendError(res, (error instanceof Error ? error.message : 'Failed to complete task'), StatusCode.INTERNAL_SERVER_ERROR);
   }
  };
 }

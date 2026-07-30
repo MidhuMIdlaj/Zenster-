@@ -164,8 +164,9 @@ export const sendSMS = async (phone: string, message: string): Promise<boolean> 
     } else {
       throw new Error('SMS sending failed');
     }
-  } catch (error: any) {
-    console.error('SMS Service Error:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('SMS Service Error:', message);
     throw error;
   }
 };

@@ -72,10 +72,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
     const fetchUnreadChatCount = async () => {
       try {
         const response = await NotificationService.getUnreadChatNotifications(userId, 'coordinator');
-        if (response.success) {
-          setUnreadMessages(response.notifications.length);
-          localStorage.setItem('adminUnreadChat', response.notifications.length.toString());
-        }
+        const unreadCount = response?.notifications?.length ?? 0;
+        setUnreadMessages(unreadCount);
+        localStorage.setItem('adminUnreadChat', unreadCount.toString());
       } catch (error) {
         console.error("Error fetching unread chat count:", error);
       }

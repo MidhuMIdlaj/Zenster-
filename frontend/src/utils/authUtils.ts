@@ -1,6 +1,7 @@
 // src/utils/authUtils.ts
 import axios from 'axios';
-import { store } from '../store/Store';
+import { store, persistor } from '../store/Store';
+import { clearEmployeeAuth } from '../store/EmployeeAuthSlice';
 
 export const refreshToken = async () => {
   try {
@@ -38,5 +39,26 @@ export const refreshToken = async () => {
     store.dispatch({ type: 'adminAuth/clearAdminAuth' });
     store.dispatch({ type: 'employeeAuth/clearEmployeeAuth' });
     throw error;
+  }
+};
+
+export const clearEmployeeSessionSync = () => {
+  store.dispatch(clearEmployeeAuth());
+  if (typeof window === 'undefined') return;
+
+  localStorage.removeItem('employeeData');
+  localStorage.removeItem('token');
+  localStorage.removeItem('persist:root');
+  document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+};
+
+export const clearEmployeeSession = async () => {
+  clearEmployeeSessionSync();
+
+  try {
+    await persistor.purge();
+  } catch (err) {
+    console.error('Failed to purge persisted storage:', err);
   }
 };

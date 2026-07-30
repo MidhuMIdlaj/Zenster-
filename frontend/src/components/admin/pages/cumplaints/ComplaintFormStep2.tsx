@@ -39,7 +39,8 @@ const ComplaintFormStep2: React.FC<ComplaintFormStep2Props> = ({
     const [showProductSelect, setShowProductSelect] = useState(true);
     const [normalizedProducts, setNormalizedProducts] = useState<(Product & { _id?: string, tempId?: string })[]>([]);
 
-    const assignedMechanic = mechanics.find(
+    const safeMechanics = Array.isArray(mechanics) ? mechanics : [];
+    const assignedMechanic = safeMechanics.find(
         (m) => m.mechanicId === (typeof formData.assignedMechanicId === "string" ? formData.assignedMechanicId : "")
     );
 

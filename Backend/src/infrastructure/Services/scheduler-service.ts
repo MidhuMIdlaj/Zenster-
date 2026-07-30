@@ -171,7 +171,7 @@ export class ComplaintReassignmentScheduler {
           newMechanic.id,
           { lastAssignedAt: new Date() },
           { new: true }
-        ).catch((err: any) => console.error('Error updating mechanic lastAssignedAt:', err));
+        ).catch((err: unknown) => console.error('Error updating mechanic lastAssignedAt:', err));
 
         const assignedBy = complaint.createdBy.includes("@")
           ? { email: complaint.createdBy }
@@ -205,14 +205,25 @@ export class ComplaintReassignmentScheduler {
    const { complaintId } = job.attrs.data;
 
    try {
-    const complaint = await this.getComplaintByIdUsecase.execute(complaintId);
+    let complaint;
+    try {
+      complaint = await this.getComplaintByIdUsecase.execute(complaintId);
+    } catch (err: unknown) {
+      const e = err as Record<string, unknown>;
+      if (e && (e['name'] === 'NotFoundError' || e['message'] === 'Complaint not found')) {
+        console.log(`⚠️ Complaint ${complaintId} not found; cancelling retry`);
+        return;
+      }
+      throw err;
+    }
 
     if (!complaint) {
-      console.log(`⚠️ Complaint ${complaintId} not found`);
+      console.log(`⚠️ Complaint ${complaintId} not found after lookup`);
       return;
     }
 
-    if (complaint.workingStatus !== "pending" || (complaint.assignedMechanicId?.length > 0)) {
+    const hasAssignedMechanics = Array.isArray((complaint as unknown as Record<string, unknown>).assignedMechanics) && ((complaint as unknown as Record<string, unknown>).assignedMechanics as unknown[]).length > 0;
+    if (complaint.workingStatus !== "pending" || hasAssignedMechanics) {
       console.log(`⚠️ Complaint ${complaintId} already has assigned mechanic or not pending`);
       return;
     }
@@ -258,7 +269,7 @@ export class ComplaintReassignmentScheduler {
       newMechanic.id,
       { lastAssignedAt: new Date() },
       { new: true }
-    ).catch((err: any) => console.error('Error updating mechanic lastAssignedAt:', err));
+    ).catch((err: unknown) => console.error('Error updating mechanic lastAssignedAt:', err));
 
      console.log(`✅ Assigned mechanic ${newMechanic.employeeName} to complaint ${complaintId}`);
    } catch (err) {

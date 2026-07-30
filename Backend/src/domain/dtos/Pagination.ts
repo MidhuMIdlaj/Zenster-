@@ -1,4 +1,4 @@
-export interface PaginationDTO<T = any> {
+export interface PaginationDTO<T = unknown> {
   
   body: T[];
 

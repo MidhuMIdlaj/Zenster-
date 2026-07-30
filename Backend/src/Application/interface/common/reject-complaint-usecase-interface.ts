@@ -6,7 +6,7 @@ export interface IRejectComplaintUseCase {
   ): Promise<{
     success: boolean;
     message: string;
-    complaint?: any;
+    complaint?: unknown;
     currentStatus?: string;
   }>;
 }
