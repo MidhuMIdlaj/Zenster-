@@ -14,6 +14,7 @@ import { IGetEmployeeProfileUsecase } from "../../domain/dtos/Employee-usecase/g
 import { IGetAvailableMechanicUsecase } from "../../domain/dtos/complaint-usecase/get-available-mechanic-usecase-interface";
 import { ComplaintReassignmentScheduler } from "../Services/scheduler-service";
 import { ISafeEmployee } from "../../domain/dtos/Employee-usecase/safe-employee-interface";
+import { BaseRepository } from './base-repository';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -28,7 +29,12 @@ const MAX_PENDING_COMPLAINTS = 5;
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 @injectable()
-export default class EmployeeRepoImpl implements EmployeeRepository {
+export default class EmployeeRepoImpl extends BaseRepository<any> implements EmployeeRepository {
+  constructor(
+    @inject(TYPES.EmailService) private EmailService: EmailService,
+  ) {
+    super(EmployeeModel as any);
+  }
   private buildFieldRegex(productType: string): RegExp[] {
     const normalizedType = productType.toLowerCase().trim();
     if (!normalizedType) {
@@ -68,9 +74,6 @@ export default class EmployeeRepoImpl implements EmployeeRepository {
 
     return Array.from(aliases);
   }
-  constructor(
-    @inject(TYPES.EmailService) private EmailService: EmailService,
-  ) { }
   async createEmployee(
     employeeName: string,
     emailId: string,

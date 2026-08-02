@@ -3,6 +3,7 @@ import LoginEmployeeUseCase from "../../../Application/usecases/employee/login-e
 import ResetPasswordRequestUseCase from "../../../Application/usecases/employee/reset-password-request-usecase";
 import ResetPasswordUseCase from "../../../Application/usecases/employee/reset-password-usecase";
 import { generateAccessToken, generateRefreshToken } from "../../../middleware/auth-middleware";
+import { config } from '../../../config';
 import { StatusCode } from "../../../shared/enums/statusCode";
 import { sendError, sendSuccess } from "../../../shared/response";
 import { inject, injectable } from "inversify";
@@ -39,16 +40,36 @@ export default class EmployeeAuthController {
 
      res.cookie('accessToken', accessToken,{
       httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
+      secure: config.nodeEnv === 'production',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'strict',
+      domain: (() => {
+        try {
+          const urls = config.clientUrl.split(',').map(u => u.trim()).filter(Boolean);
+          const u = new URL(urls[0]);
+          const host = u.hostname.replace(/^www\./, '');
+          return `.${host}`;
+        } catch (e) {
+          return undefined;
+        }
+      })(),
       maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 
 
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'strict',
+      httpOnly: true,
+      secure: config.nodeEnv === 'production',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'strict',
+      domain: (() => {
+        try {
+          const urls = config.clientUrl.split(',').map(u => u.trim()).filter(Boolean);
+          const u = new URL(urls[0]);
+          const host = u.hostname.replace(/^www\./, '');
+          return `.${host}`;
+        } catch (e) {
+          return undefined;
+        }
+      })(),
       maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 

@@ -4,8 +4,12 @@ import IUserRepository from "../../domain/Repository/i-user-repository";
 import bcrypt from "bcrypt";
 import ClientModel from "../db/models/Admin/client.model";
 import Client from "../../domain/entities/User";
+import { BaseRepository } from './base-repository';
 
-export default class UserRepoImpl implements IUserRepository {
+export default class UserRepoImpl extends BaseRepository<any> implements IUserRepository {
+  constructor() {
+    super(ClientModel as any);
+  }
   async findByEmail(email: string): Promise<User | null> {
     const client = await ClientModel.findOne({ email });
     if (!client) return null;

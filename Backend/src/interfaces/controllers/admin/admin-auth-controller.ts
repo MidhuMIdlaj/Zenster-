@@ -5,6 +5,7 @@ import { AdminModel } from "../../../infrastructure/db/models/Admin/admin.model"
 import Employee from "../../../infrastructure/db/models/employee.model";
 const jwt = require("jsonwebtoken");
 import dotenv from 'dotenv';
+import { config } from '../../../config';
 import { generateAccessToken } from "../../../middleware/auth-middleware";
 import { StatusCode } from "../../../shared/enums/statusCode";
 import { sendError, sendResponse, sendSuccess } from "../../../shared/response";
@@ -65,14 +66,34 @@ adminLogin = async (req: Request, res: Response) => {
 
     res.cookie("accessToken", result.data!.accessToken, {
       httpOnly: false,
-      secure: false,
-      sameSite: "lax",
+      secure: config.nodeEnv === 'production',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
+      domain: (() => {
+        try {
+          const urls = config.clientUrl.split(',').map(u => u.trim()).filter(Boolean);
+          const u = new URL(urls[0]);
+          const host = u.hostname.replace(/^www\./, '');
+          return `.${host}`;
+        } catch (e) {
+          return undefined;
+        }
+      })(),
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: false,
-      secure: false,
-      sameSite: "lax",
+      httpOnly: true,
+      secure: config.nodeEnv === 'production',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
+      domain: (() => {
+        try {
+          const urls = config.clientUrl.split(',').map(u => u.trim()).filter(Boolean);
+          const u = new URL(urls[0]);
+          const host = u.hostname.replace(/^www\./, '');
+          return `.${host}`;
+        } catch (e) {
+          return undefined;
+        }
+      })(),
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
@@ -128,8 +149,18 @@ adminLogin = async (req: Request, res: Response) => {
 
       res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        secure: config.nodeEnv === 'production',
+        sameSite: config.nodeEnv === 'production' ? 'none' : 'strict',
+        domain: (() => {
+          try {
+            const urls = config.clientUrl.split(',').map(u => u.trim()).filter(Boolean);
+            const u = new URL(urls[0]);
+            const host = u.hostname.replace(/^www\./, '');
+            return `.${host}`;
+          } catch (e) {
+            return undefined;
+          }
+        })(),
       });
 
       if (payload.role === 'admin') {

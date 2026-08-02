@@ -11,10 +11,14 @@ import { IDeleteComplaintUsecase } from '../../domain/dtos/complaint-usecase/com
 import { IComplaintRepoReturn } from '../../domain/dtos/complaint-usecase/create-complaint-usecase-interface';
 import { IGetComplaintMechanicUsecase } from '../../domain/dtos/complaint-usecase/get-mechanic-complaint-usecase-interface';
 import { IComplaint } from '../../domain/complaint/type';
+import { BaseRepository } from './base-repository';
 
 type UnknownRecord = Record<string, unknown>;
 
-export default class ComplaintRepoImpl implements IComplaintRepository {
+export default class ComplaintRepoImpl extends BaseRepository<ComplaintDocument> implements IComplaintRepository {
+  constructor() {
+    super(ComplaintModel);
+  }
   async createComplaint(
     customerName: string,
     customerEmail: string,

@@ -140,7 +140,17 @@ export const verifyToken = async  (req: Request, res: Response, next: NextFuncti
           res.cookie('accessToken', newToken, {
             httpOnly: true,
             secure: config.nodeEnv === 'production',
-            sameSite: 'strict',
+            sameSite: config.nodeEnv === 'production' ? 'none' : 'strict',
+            domain: (() => {
+              try {
+                const urls = config.clientUrl.split(',').map(u => u.trim()).filter(Boolean);
+                const u = new URL(urls[0]);
+                const host = u.hostname.replace(/^www\./, '');
+                return `.${host}`;
+              } catch (e) {
+                return undefined;
+              }
+            })(),
             maxAge: 3600000,
           });
           req.session.token = newToken;
