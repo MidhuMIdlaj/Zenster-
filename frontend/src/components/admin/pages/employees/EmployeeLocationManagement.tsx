@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Map, Search, Filter, AlertCircle, Loader } from 'lucide-react';
-import { configManager } from '../../../config/config';
+import { configManager } from '../../../../config/config';
 import './EmployeeLocationManagement.css';
 
 interface EmployeeLocation {

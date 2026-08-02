@@ -56,13 +56,17 @@ export interface EmployeeFormData {
 }
 
 
-export interface  responseData {
-  employeeName : string;
+export interface responseData {
+  success: boolean;
   message: string;
-  token: string;
-  emailId : string;
-  position :  string;
-  id : string
+  statusCode: number;
+  data: {
+    token: string;
+    id: string;
+    position: string;
+    employeeName: string;
+    emailId?: string;
+  };
 }
 
 export interface ResetPasswordEmailFormData {

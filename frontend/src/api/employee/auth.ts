@@ -1,17 +1,28 @@
 import axios, { AxiosResponse } from "axios";
-import {  ResetPasswordEmailFormData } from "../../types/dashboard";
-import  {responseData}  from "../../types/dashboard";
+import { ResetPasswordEmailFormData, responseData } from "../../types/dashboard";
 import { configManager } from '../../config/config';
 
 
 const BASE_URL = configManager.getApiEndpoint('/employee');
+
+export interface EmployeeLoginResponse {
+  success: boolean;
+  message: string;
+  statusCode: number;
+  data: {
+    token: string;
+    id: string;
+    position: string;
+    employeeName: string;
+  };
+}
 
 export const EmployeeLoginApi = async (
     email: string,
     password: string
   ): Promise<AxiosResponse<responseData>> => {
     try {
-      const response = await axios.post<responseData>(
+      const response = await axios.post<EmployeeLoginResponse>(
         `${BASE_URL}/loginEmployee`,
         { email, password },
         { withCredentials: true }
@@ -19,7 +30,7 @@ export const EmployeeLoginApi = async (
       return response;
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response) {
-        return error.response;
+        return error.response as AxiosResponse<EmployeeLoginResponse>;
       }
       throw new Error("Oops something went wrong");
     }
