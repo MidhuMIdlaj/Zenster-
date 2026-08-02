@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { configManager } from '../../config/config';
 import './LocationPermissionDialog.css';
 
 interface LocationPermissionDialogProps {
@@ -57,7 +58,7 @@ export const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> =
 
   const requestServerPermission = async () => {
     try {
-      const response = await fetch('/api/location/permission/grant', {
+      const response = await fetch(`${configManager.getApiBaseUrl()}/location/permission/grant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

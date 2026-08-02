@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useGoogleMaps, useMapMarkers, useMapInfoWindows } from '../../hooks/useGoogleMaps';
 import { RealTimeLocationService } from '../../services/location/realtime-location-service';
 import { EmployeeLocationWithStatus, LocationFilterOptions } from '../../types/location-types';
+import { configManager } from '../../config/config';
 import './LocationMapContainer.css';
 
 interface AdminLocationMapProps {
@@ -55,7 +56,7 @@ export const AdminLocationMap: React.FC<AdminLocationMapProps> = ({
     // Fetch initial locations
     const fetchInitialLocations = async () => {
       try {
-        const response = await fetch('/api/location/all-current', {
+        const response = await fetch(`${configManager.getApiBaseUrl()}/location/all-current`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },

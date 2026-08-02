@@ -132,8 +132,9 @@ const MechanicSidebar: React.FC<MechanicSidebarProps> = ({
         
         const response = await NotificationService.getUnreadChatNotifications(userId, 'mechanic');
         if (response.success) {
-          setUnreadMessages(response.notifications.length);
-          localStorage.setItem('mechanicUnreadChat', response.notifications.length.toString());
+          const unreadCount = Array.isArray(response.notifications) ? response.notifications.length : 0;
+          setUnreadMessages(unreadCount);
+          localStorage.setItem('mechanicUnreadChat', unreadCount.toString());
         }
       } catch (error) {
         console.error("Error initializing mechanic chat count:", error);

@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Map, Search, Filter, AlertCircle, Loader } from 'lucide-react';
+import { configManager } from '../../../config/config';
 import './EmployeeLocationManagement.css';
 
 interface EmployeeLocation {
@@ -150,7 +151,7 @@ export const EmployeeLocationManagement: React.FC<EmployeeLocationManagementProp
   const fetchLocations = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/location/all-current', {
+      const response = await fetch(`${configManager.getApiBaseUrl()}/location/all-current`, {
         credentials: 'include', // Send cookies for authentication
       });
       

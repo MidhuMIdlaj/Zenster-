@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { configManager } from '../config/config';
 
 interface UseLocationPermissionReturn {
   hasPermission: boolean;
@@ -10,6 +11,7 @@ interface UseLocationPermissionReturn {
 }
 
 export const useLocationPermission = (active: boolean = true): UseLocationPermissionReturn => {
+  const apiBaseUrl = configManager.getApiBaseUrl();
   const [hasPermission, setHasPermission] = useState(false);
   const [isPermissionAsked, setIsPermissionAsked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +19,7 @@ export const useLocationPermission = (active: boolean = true): UseLocationPermis
 
   const checkPermissionStatus = useCallback(async () => {
     try {
-      const response = await fetch('/api/location/permission/status', {
+      const response = await fetch(`${apiBaseUrl}/location/permission/status`, {
         credentials: 'include', // Send cookies for authentication
       });
 
@@ -102,7 +104,7 @@ export const useLocationPermission = (active: boolean = true): UseLocationPermis
       }
 
       // Then request server permission
-      const response = await fetch('/api/location/permission/grant', {
+      const response = await fetch(`${apiBaseUrl}/location/permission/grant`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +154,7 @@ export const useLocationPermission = (active: boolean = true): UseLocationPermis
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/location/permission/revoke', {
+      const response = await fetch(`${apiBaseUrl}/location/permission/revoke`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
