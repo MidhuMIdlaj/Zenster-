@@ -112,7 +112,9 @@ export const fetchCoordinatorEmails = async () => {
 export const getMechanicComplaints = async (mechanicId: string | undefined): Promise<Complaint[]> => {
   try {
     const response = await axiosInstance.get(`${API_URL}/getMechanicComplaint/${mechanicId}`);
-    const complaints = response.data?.complaints || [];
+    console.log(response, "1221123")
+      const complaints = response.data?.complaints || response.data?.data?.complaints || response.data?.data || [];
+      console.debug('[API] getMechanicComplaints:', { mechanicId, count: Array.isArray(complaints) ? complaints.length : 0 });
     return complaints.map((complaint: any) => ({
       ...complaint,
       contactNumber: complaint.contactNumber || '', 

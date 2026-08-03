@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { configManager } from '../../config/config';
+import axiosInstance from '../../api/axiosInstance';
 import './LocationPermissionDialog.css';
 
 interface LocationPermissionDialogProps {
@@ -58,15 +59,8 @@ export const LocationPermissionDialog: React.FC<LocationPermissionDialogProps> =
 
   const requestServerPermission = async () => {
     try {
-      const response = await fetch(`${configManager.getApiBaseUrl()}/location/permission/grant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Send cookies for authentication
-      });
-
-      if (!response.ok) {
+      const response = await axiosInstance.post('/location/permission/grant');
+      if (!(response.status === 200 || response.data?.success)) {
         throw new Error('Failed to grant permission on server');
       }
 

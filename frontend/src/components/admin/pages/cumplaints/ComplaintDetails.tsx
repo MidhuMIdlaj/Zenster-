@@ -256,7 +256,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
             {assignedMechanics.map((assignment, idx) => (
               <li key={idx} className="p-3 border rounded-lg flex justify-between items-center">
                 <div>
-                  <p className="font-semibold">{assignment.mechanicName || assignment.mechanicDetails?.name || 'Unknown'}</p>
+                  <p className="font-semibold">{assignment.mechanicName || assignment.mechanicDetails?.employeeName || 'Unknown'}</p>
                   <p className="text-gray-600 text-sm">Status: {assignment.status}</p>
                 </div>
                 {assignment.reason && <p className="text-red-500 text-sm">{assignment.reason}</p>}

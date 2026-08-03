@@ -63,7 +63,7 @@ const ComplaintSchema: Schema = new Schema({
     updatedAt: { type: Date, required: true },
     updatedBy: { type: String, required: true }
   },
-  isDeleted : {type : String, default:false},
+  isDeleted : { type: Boolean, default: false },
   workingStatus : {
     type: String , enum :['pending','accept', 'rejected','processing','completed'], default : 'pending'
   },

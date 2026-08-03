@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use((config) => {
-  // Get token from localStorage or Redux store
+  // Get token from localStorage or Redux store (with fallbacks)
   const employeeData = JSON.parse(localStorage.getItem('employeeData') || '{}');
   let adminData: { token?: string } = {};
 
@@ -22,8 +22,14 @@ axiosInstance.interceptors.request.use((config) => {
     adminData = {};
   }
 
-  const token = employeeData.token || adminData.token;
-  
+  // also support a direct `token` key written by refresh logic
+  const fallbackToken = localStorage.getItem('token') || undefined;
+
+  let token: string | undefined = employeeData.token || adminData.token || fallbackToken;
+
+  // ensure headers object
+  if (!config.headers) config.headers = {} as any;
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
