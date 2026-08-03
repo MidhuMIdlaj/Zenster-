@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, Menu, X } from 'lucide-react';
+import { Bell, Search, Menu } from 'lucide-react';
 import NotificationModal from './NotificationModal';
 import { useSelector } from 'react-redux';
 import { selectAdminAuthData } from '../../../store/selectors';
@@ -20,9 +20,9 @@ interface Notification {
 
 const Header: React.FC<{ onToggleSidebar: () => void }> = ({ onToggleSidebar }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [tip, setTip] = useState('');
   const { adminData } = useSelector(selectAdminAuthData);
   const userId = adminData?.id;
   const token = adminData?.token;
@@ -132,6 +132,7 @@ const Header: React.FC<{ onToggleSidebar: () => void }> = ({ onToggleSidebar }) 
     if (isModalOpen) fetchNotifications();
   }, [isModalOpen, userId]);
 
+
   return (
     <div className="bg-blue-500 p-3 sm:p-4 fixed top-0 left-0 right-0 z-40 shadow-md min-h-14 sm:min-h-16">
       <div className="flex justify-between items-center max-w-full mx-auto">
@@ -159,23 +160,8 @@ const Header: React.FC<{ onToggleSidebar: () => void }> = ({ onToggleSidebar }) 
 
         {/* Right Side - Search + Notifications */}
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-          {/* Mobile Search Toggle */}
-          <button
-            className="sm:hidden p-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors touch-manipulation"
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-          >
-            {isSearchOpen ? <X size={18} /> : <Search size={18} />}
-          </button>
 
-          {/* Desktop Search */}
-          <div className="relative hidden sm:block">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="py-2 pl-10 pr-4 bg-blue-600 text-white placeholder-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-48 md:w-64 transition-all"
-            />
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
-          </div>
+        
 
           {/* Notification Bell */}
           <div className="relative">
@@ -195,19 +181,17 @@ const Header: React.FC<{ onToggleSidebar: () => void }> = ({ onToggleSidebar }) 
       </div>
 
       {/* Mobile Search Bar */}
-      {isSearchOpen && (
-        <div className="sm:hidden mt-3 px-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full py-2 pl-10 pr-4 bg-blue-600 text-white placeholder-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              autoFocus
-            />
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
-          </div>
+      <div className="sm:hidden mt-3 px-2">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search..."
+            className="w-full py-2 pl-10 pr-4 bg-blue-600 text-white placeholder-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            autoFocus
+          />
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
         </div>
-      )}
+      </div>
 
       {/* Notification Modal with responsive positioning */}
       {isModalOpen && (
