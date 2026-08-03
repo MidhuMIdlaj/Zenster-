@@ -268,10 +268,10 @@ export class NotificationRepository implements INotificationRepository {
   ) {
  
     try {
-
-      const truncatedMessage = messageText.length > 50 
-        ? `${messageText.substring(0, 50)}...` 
-        : messageText;
+      const normalizedMessageText = messageText || '';
+      const truncatedMessage = normalizedMessageText.length > 50 
+        ? `${normalizedMessageText.substring(0, 50)}...` 
+        : normalizedMessageText;
 
       const notification = new NotificationModel({
         recipientId,

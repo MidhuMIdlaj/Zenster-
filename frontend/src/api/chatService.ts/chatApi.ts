@@ -48,7 +48,8 @@ sendMessage: async (messageData: any, files: File[] = []) => {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+    const responseData = response.data;
+    return responseData?.success && responseData.data ? responseData.data : responseData;
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;

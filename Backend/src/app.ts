@@ -136,46 +136,27 @@ export const setupSocket = (httpServer: HttpServer) => {
 
     socket.on('send_message', async (message, callback) => {
       try {
-        io.to(`user_${message.receiverId}`).emit('new_message', message);
-        callback({ success: true, messageId: message._id });
-        socket.emit('message_delivered', { messageId: message._id });
+        const messagePayload = message?.data ?? message;
+        io.to(`user_${messagePayload.receiverId}`).emit('new_message', messagePayload);
+        callback({ success: true, messageId: messagePayload._id });
+        socket.emit('message_delivered', { messageId: messagePayload._id });
 
-        const recipientSockets = await io.in(`user_${message.receiverId}`).fetchSockets();
+        const recipientSockets = await io.in(`user_${messagePayload.receiverId}`).fetchSockets();
         const isRecipientActive = recipientSockets.some(s =>
-          s.data.currentConversationId === message.conversationId
+          s.data.currentConversationId === messagePayload.conversationId
         );
 
         if (isRecipientActive) {
           await ChatMessage.updateOne(
-            { _id: message._id },
+            { _id: messagePayload._id },
             { $set: { isRead: true } }
           );
-          io.to(message.conversationId).emit('message_read', {
-            messageId: message._id
+          io.to(messagePayload.conversationId).emit('message_read', {
+            messageId: messagePayload._id
           });
-        } else {
-          const notificationRepo = new NotificationRepository();
-          
-          // Fetch sender's name from database
-          let senderName = 'Unknown';
-          if (message.senderRole === 'admin') {
-            const admin = await AdminModel.findById(message.senderId);
-            senderName = admin ? `${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'Admin' : 'Admin';
-          } else {
-            const employee = await EmployeeModel.findById(message.senderId);
-            senderName = employee?.employeeName || 'Employee';
-          }
-
-          await notificationRepo.createChatNotification(
-            message.receiverId,
-            message.senderId,
-            senderName,
-            message.text,
-            message.conversationId,
-            message.receiverRole,
-            message.senderRole
-          );
         }
+        // Notification is created on the HTTP save path in chat-controller.saveMessage,
+        // so we skip creating it here to avoid duplicate notifications.
       } catch (err: unknown) {
         let message = 'Unknown error';
         if (err instanceof Error) {
