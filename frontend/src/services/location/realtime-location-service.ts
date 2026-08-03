@@ -46,7 +46,6 @@ export class RealTimeLocationService {
       this.fetchAllLocations();
     }, intervalMs);
 
-    console.log(`Real-time location polling started (interval: ${intervalMs}ms)`);
   }
 
   /**
@@ -59,7 +58,6 @@ export class RealTimeLocationService {
     }
 
     this.isPolling = false;
-    console.log('Real-time location polling stopped');
   }
 
   /**

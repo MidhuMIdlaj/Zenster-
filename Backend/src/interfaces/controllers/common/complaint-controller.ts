@@ -215,7 +215,6 @@ export default class ComplaintController {
       return;
     }
 
-    console.log('Mechanic working status:', mechanic);
     if (mechanic.workingStatus !== 'Available') {
       sendError(res, 'Cannot accept new tasks. Mechanic is currently occupied with another task.', StatusCode.BAD_REQUEST, undefined, { mechanicStatus: mechanic.workingStatus });
       return;
@@ -377,7 +376,6 @@ completeTask = async (req: Request, res: Response) => {
       sendError(res, 'Task not found', StatusCode.NOT_FOUND);
       return;
     }
-    console.log('Completed Task:', completedTask);
     sendSuccess(res, { data: completedTask }, 'Task completed successfully', StatusCode.OK);
   } catch (error: unknown) {
     console.error('Error in completeTask:', error);

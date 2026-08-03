@@ -41,7 +41,6 @@ export class EmailService implements IEmailService {
 
   private async initializeTransporter() {
     if (this.emailService === 'resend') {
-      console.log('[RESEND] Using Resend email service');
       return;
     } else if (this.emailService === 'ethereal') {
       try {
@@ -56,7 +55,6 @@ export class EmailService implements IEmailService {
             pass: testAccount.pass,
           },
         });
-        console.log(`[ETHEREAL] Test email account ready. Emails will be previewed.`);
       } catch (error) {
         console.error('[ETHEREAL] Failed to create test account:', error);
         this.transporter = this.createGmailTransporter();
@@ -70,7 +68,6 @@ export class EmailService implements IEmailService {
           pass: config.emailPass,
         },
       });
-      console.log('[MAILTRAP] Using Mailtrap email service');
     } else {
       this.transporter = this.createGmailTransporter();
     }
@@ -121,8 +118,7 @@ export class EmailService implements IEmailService {
       throw new Error(`Resend API error: ${result?.message || JSON.stringify(result)}`);
     }
 
-    console.log(`✅ [EMAIL SUCCESS] Email sent via Resend to: ${to}`);
-    console.log(`📧 Message ID: ${result.id}`);
+
   }
 
   private async sendMail(to: string, subject: string, html: string): Promise<void> {
@@ -147,7 +143,6 @@ export class EmailService implements IEmailService {
           subject,
           html,
         });
-        console.log(`✅ [EMAIL SUCCESS] Email sent via Gmail fallback to: ${to}`);
         return;
       }
 

@@ -100,7 +100,6 @@ const MechanicTasks: React.FC = () => {
     if (employeeData?.id) {
       console.debug('[UI] fetching mechanic complaints for id:', employeeData.id);
       const data = await getMechanicComplaints(employeeData.id);
-      console.log(data , "4234234")
       const formattedTasks = data.map((task: any) => {
         // Normalize status values with proper type safety
         const statusMap: Record<string, WorkingStatus> = {

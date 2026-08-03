@@ -125,7 +125,6 @@ const MechanicProfile = () => {
   if (!profileData) {
     return <div className="p-6">No profile data available</div>;
   }
-  console.log(profileData, "12341234")
   return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

@@ -3,6 +3,7 @@ import { User, Mail, Phone, Clock, CheckCircle, X, CreditCard } from 'lucide-rea
 import { motion } from 'framer-motion';
 import { ComplaintFormData, coordinator, Mechanic } from '../../../../types/complaint';
 import { StatusType } from '../../../../api/cplaint/complaint';
+import { configManager } from '../../../../config/config';
 
 interface ComplaintDetailsProps {
   complaint: ComplaintFormData;
@@ -86,7 +87,7 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
   };
 
   const assignedMechanics = getAssignedMechanics();
-  console.log('[FRONTEND] computedAssignedMechanics:', assignedMechanics);
+
 
   const formatDate = (date?: string | Date) => {
     if (!date) return 'N/A';
@@ -141,6 +142,20 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
       case 'high': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStaticBaseUrl = (): string => {
+    return configManager.getApiBaseUrl().replace(/\/api\/?$/i, '');
+  };
+
+  const normalizePhotoUrl = (photoUrl: string): string => {
+    if (!photoUrl) return photoUrl;
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl;
+    }
+    const cleanedPhotoUrl = photoUrl.replace(/^\/+/, '').replace(/\\/g, '/');
+    const normalizedUrl = `${getStaticBaseUrl()}/${cleanedPhotoUrl}`;
+    return normalizedUrl;
   };
 
   return (
@@ -227,12 +242,19 @@ const ComplaintDetails: React.FC<ComplaintDetailsProps> = ({ complaint, mechanic
           {complaint.completionDetails.photos?.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
               {complaint.completionDetails.photos.map((photo, idx) => (
-                <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="rounded-lg object-cover w-full h-32 border" />
+                <img
+                  key={idx}
+                  src={normalizePhotoUrl(photo)}
+                  alt={`Photo ${idx + 1}`}
+                  className="rounded-lg object-cover w-full h-32 border"
+                  onError={(e) => {
+                      console.error("S3 image failed:", e.currentTarget.src);
+                }}
+                />
               ))}
             </div>
           )}
 
-          {/* Payment Info */}
           {complaint.completionDetails.amount && (
             <div className="flex items-center mb-2">
               <CreditCard className="text-purple-500 mr-2" />

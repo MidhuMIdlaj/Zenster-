@@ -54,11 +54,9 @@ export class ComplaintReassignmentScheduler {
     });
 
     this.agenda.on('start', job => {
-      console.log(`🚀 Job ${job.attrs.name} starting`, job.attrs.data);
     });
 
     this.agenda.on('complete', job => {
-      console.log(`🏁 Job ${job.attrs.name} completed`, job.attrs.data);
     });
  
     this.agenda.on('fail', (err, job) => {
@@ -123,12 +121,10 @@ export class ComplaintReassignmentScheduler {
         const complaint = await this.getComplaintByIdUsecase.execute(complaintId);
         
         if (!complaint) {
-          console.log(`⚠️ Complaint ${complaintId} not found`);
           return;
         }
 
         if (complaint.workingStatus !== "rejected") {
-          console.log(`⚠️ Complaint ${complaintId} status is ${complaint.workingStatus}, expected 'rejected'`);
           return;
         }
         const newMechanic = await this.FindBestMechanicUseCase.execute(
@@ -211,20 +207,17 @@ export class ComplaintReassignmentScheduler {
     } catch (err: unknown) {
       const e = err as Record<string, unknown>;
       if (e && (e['name'] === 'NotFoundError' || e['message'] === 'Complaint not found')) {
-        console.log(`⚠️ Complaint ${complaintId} not found; cancelling retry`);
         return;
       }
       throw err;
     }
 
     if (!complaint) {
-      console.log(`⚠️ Complaint ${complaintId} not found after lookup`);
       return;
     }
 
     const hasAssignedMechanics = Array.isArray((complaint as unknown as Record<string, unknown>).assignedMechanics) && ((complaint as unknown as Record<string, unknown>).assignedMechanics as unknown[]).length > 0;
     if (complaint.workingStatus !== "pending" || hasAssignedMechanics) {
-      console.log(`⚠️ Complaint ${complaintId} already has assigned mechanic or not pending`);
       return;
     }
 
@@ -234,7 +227,6 @@ export class ComplaintReassignmentScheduler {
     );
 
     if (!newMechanic) {
-      console.log(`⚠️ No mechanic found for complaint ${complaintId}. Retrying in 24h`);
       await this.scheduleUnavailableMechanicCheck(complaintId, "in 2 hours");
       return;
     }
@@ -271,7 +263,6 @@ export class ComplaintReassignmentScheduler {
       { new: true }
     ).catch((err: unknown) => console.error('Error updating mechanic lastAssignedAt:', err));
 
-     console.log(`✅ Assigned mechanic ${newMechanic.employeeName} to complaint ${complaintId}`);
    } catch (err) {
      console.error(`❌ Error in assignWhenMechanicAvailable for complaint ${complaintId}:`, err);
      await this.scheduleUnavailableMechanicCheck(complaintId, "in 2 hours");
@@ -317,7 +308,6 @@ export class ComplaintReassignmentScheduler {
   complaintId: string,
   delay: string = "in 2 hours"
 ): Promise<Job> {
-  console.log("Scheduling unavailable mechanic check for complaint:", complaintId, "after", delay);
   if (!this.isReady) throw new Error("Agenda not initialized");
 
   if (!delay.startsWith("in ")) delay = `in ${delay}`;

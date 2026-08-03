@@ -55,7 +55,6 @@ export class ChatController {
  saveMessage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { senderId, receiverId, text, conversationId, senderRole, receiverRole, messageType } = req.body;
-      console.log({senderId, receiverId, text, conversationId, senderRole, receiverRole, messageType}, "Request body for saveMessage");
       const files = req.files as Express.Multer.File[] | undefined;
 
       if (!senderId || !receiverId || !conversationId || !senderRole || !receiverRole) {

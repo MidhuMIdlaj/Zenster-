@@ -76,9 +76,7 @@ export const validateAdminCoordinatorEmail = async (email: string): Promise<any>
 
 
 export const createComplaint = async (complaintData: ComplaintFormData) => {
-  console.log('[API] createComplaint payload:', complaintData);
   const response = await axiosInstance.post(`${API_URL}/createComplaint`, complaintData);
-  console.log('[API] createComplaint response:', response.data);
   return response.data.data;
 };
 
@@ -112,7 +110,6 @@ export const fetchCoordinatorEmails = async () => {
 export const getMechanicComplaints = async (mechanicId: string | undefined): Promise<Complaint[]> => {
   try {
     const response = await axiosInstance.get(`${API_URL}/getMechanicComplaint/${mechanicId}`);
-    console.log(response, "1221123")
       const complaints = response.data?.complaints || response.data?.data?.complaints || response.data?.data || [];
       console.debug('[API] getMechanicComplaints:', { mechanicId, count: Array.isArray(complaints) ? complaints.length : 0 });
     return complaints.map((complaint: any) => ({

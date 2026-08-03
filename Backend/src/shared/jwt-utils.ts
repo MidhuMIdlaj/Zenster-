@@ -223,7 +223,6 @@ export class TokenBlacklist {
       this.blacklistedTokens.delete(token);
     });
 
-    console.log(`Cleaned up ${tokensToRemove.length} expired tokens from blacklist`);
   }
 
   /**

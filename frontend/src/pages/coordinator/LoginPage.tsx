@@ -69,10 +69,8 @@ const EmployeeLogin: React.FC = () => {
       (async () => {
         try {
           const response = await EmployeeLoginApi(email, password);
-          console.log('[EmployeeLogin] login response:', response);
           if (response.status === 200 && response.data?.data) {
             const { token, id, position, employeeName } = response.data.data;
-            console.log('[EmployeeLogin] auth payload:', { token, id, position, employeeName });
             dispatch(setEmployeeAuth({ token, id, position, employeeName }));
 
             if (position === "mechanic") {

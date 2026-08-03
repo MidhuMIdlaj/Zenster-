@@ -307,7 +307,6 @@ const ComplaintTable: React.FC = () => {
         selectedProductId: formData.selectedProductId ?? "",
         workingStatus: formData.workingStatus ?? "",
       };
-      console.log('[FRONTEND] Submit complaint payload:', complaintData);
 
       let response;
       if (isEditMode && formData.id) {
@@ -382,7 +381,6 @@ const ComplaintTable: React.FC = () => {
   };
 
   const openViewModal = (complaint: ComplaintFormData) => {
-    console.log('[FRONTEND] Open complaint details:', complaint);
     setSelectedComplaint(complaint);
     setShowViewModal(true);
   };

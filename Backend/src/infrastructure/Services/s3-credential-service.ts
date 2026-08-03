@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
@@ -45,6 +45,7 @@ export class ComplaintAttachmentUploader {
       Key: filename,
       Body: fileBuffer,
       ContentType: file.mimetype,
+      ACL: 'public-read' as ObjectCannedACL,
     };
 
     const command = new PutObjectCommand(uploadParams);

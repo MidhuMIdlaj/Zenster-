@@ -37,7 +37,6 @@ export const useGoogleMaps = (options: UseGoogleMapsOptions = {}) => {
       mapRef.current = GoogleMapsService.initializeMap(mapContainerRef.current, mapOptions);
       isInitializedRef.current = true;
 
-      console.log('Google Maps initialized successfully');
     } catch (error) {
       console.error('Error initializing Google Maps:', error);
     }

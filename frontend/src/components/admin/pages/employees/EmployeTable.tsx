@@ -281,7 +281,6 @@ const handleInputChange = (
 
   // Modal actions
   const openEditModal = (employee: EmployeeFormData) => {
-    console.log("Editing employee:", employee);
     setFormData({
       id: employee.id,
       date: employee.date || Date.now().toString(),

@@ -19,7 +19,6 @@ export default class LocationController {
    */
   trackLocation = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log('Received location tracking request:', req.body);
       const { latitude, longitude, accuracy, provider } = req.body;
       // Get employeeId from authenticated user (set by verifyToken middleware)
       const authReq = req as Request & { user?: { userId?: string }; employee?: { id?: string } };
@@ -151,7 +150,6 @@ export default class LocationController {
   getAllCurrentLocations = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const locations = await this.locationRepository.getCurrentLocationsOfAllEmployees();
-      console.log('Retrieved current locations of all employees:', locations);
       sendSuccess(res, { totalLocations: locations.length, locations }, 'All current locations retrieved successfully', StatusCode.OK);
     } catch (error) {
       next(error);
@@ -167,14 +165,12 @@ export default class LocationController {
       // Get employeeId from authenticated user (set by verifyToken middleware)
       const authReq = req as Request & { user?: { userId?: string }; employee?: { id?: string } };
       const employeeId = authReq.user?.userId || authReq.employee?.id;
-        console.log(employeeId, 'Employee ID for granting permission');
       if (!employeeId) {
         sendError(res, 'Employee not authenticated', StatusCode.UNAUTHORIZED);
         return;
       }
 
       const permission = await this.locationRepository.grantPermission(employeeId);
-      console.log(permission, 'Permission granted for employee:', employeeId);
       sendSuccess(res, permission, 'Location tracking permission granted', StatusCode.OK);
     } catch (error) {
       next(error);

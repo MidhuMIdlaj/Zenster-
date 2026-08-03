@@ -59,7 +59,6 @@ export const UpdateClientStatusApi = async (clientId: string, status: string): P
 
 export const UpdateClientApi = async (id: string, data: any): Promise<any> => {
   try {
-    console.log(id , data , "1234234")
     const response = await axiosInstance.patch(
       `${API_BASE_URL}/editClient/${id}`,
       data, 
@@ -79,7 +78,6 @@ export const UpdateClientApi = async (id: string, data: any): Promise<any> => {
 
 export const getClientById = async (id: string): Promise<any> => {
   try {
-    console.log(id , "api client id")
     const response = await axiosInstance.get(
       `${API_BASE_URL}/getClient/${id}`,
       {
