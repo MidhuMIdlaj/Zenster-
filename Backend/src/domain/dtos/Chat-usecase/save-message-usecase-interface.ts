@@ -14,3 +14,14 @@ export interface ISavedMessageUsecase {
   senderRole: string;
   receiverRole: string;
 }
+export interface SaveMessageInput {
+  senderId: string;
+  receiverId: string;
+  text?: string;
+  conversationId: string;
+  senderRole: string;
+  receiverRole: string;
+  messageType?: string;
+  files?: Express.Multer.File[];
+  attachments?: IAttachment[];  
+}

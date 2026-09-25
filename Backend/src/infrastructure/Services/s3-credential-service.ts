@@ -3,8 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
 import { Express } from 'express';
+import { IComplaintAttachmentRepository } from '../../domain/Repository/i-complaint-attachment-upload-repository';
+import { injectable } from 'inversify';
 
-export class ComplaintAttachmentUploader {
+@injectable()
+export class ComplaintAttachmentUploader implements IComplaintAttachmentRepository {
   private s3Client?: S3Client;
   private bucketName?: string;
   private region?: string;

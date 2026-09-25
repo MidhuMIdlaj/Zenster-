@@ -2,10 +2,11 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
-import { Express } from 'express';
 import { IChatAttachmentUploaderRepository } from '../../domain/Repository/i-chat-attachment-upload-repository';
 import { config } from '../../config';
+import { injectable } from 'inversify';
 
+@injectable()
 export class ChatAttachmentUploader implements IChatAttachmentUploaderRepository {
   private s3Client?: S3Client;
   private bucketName?: string;

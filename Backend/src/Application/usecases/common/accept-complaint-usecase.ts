@@ -2,7 +2,7 @@ import { inject, injectable } from "inversify";
 import IComplaintRepository from "../../../domain/Repository/i-complaint-repository";
 import IEmployeeRepository from "../../../domain/Repository/i-employee-repository";
 import { TYPES } from "../../../types";
-import { IAcceptComplaintUsecase } from "../../../domain/dtos/complaint-usecase/accept-complaint-usecase-interface";
+import { IAcceptComplaintUsecaseDto } from "../../../domain/dtos/complaint-usecase/accept-complaint-usecase-interface";
 import { IAcceptComplaintUseCase } from "../../interface/common/accept-complaint-usecase-interface";
 
 @injectable()
@@ -12,7 +12,7 @@ export class AcceptComplaint implements IAcceptComplaintUseCase {
     @inject(TYPES.IEmployeeRepository) private employeeRepo : IEmployeeRepository
   ) {}
 
-  async execute(complaintId: string, mechanicId: string): Promise<IAcceptComplaintUsecase> {
+  async execute(complaintId: string, mechanicId: string): Promise<IAcceptComplaintUsecaseDto> {
     if (!mechanicId) {
       return { success: false, message: "Mechanic ID is required" };
     }

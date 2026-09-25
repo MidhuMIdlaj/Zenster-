@@ -1,28 +1,8 @@
 // src/infrastructure/db/models/VideoCallHistory.ts
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+import { IVideoCallHistory } from '../../../domain/dtos/videocall/video-call-history-usecase-interface';
 
-export interface VideoCallParticipant {
-  employeeId: string;
-  employeeName?: string;
-  joinedAt?: Date;
-  leftAt?: Date;
-}
 
-export interface VideoCallHistoryInput {
-  roomId: string;
-  initiatorId: string;
-  initiatorName?: string;
-  participants: VideoCallParticipant[];
-  startedAt?: Date;
-  endedAt?: Date;
-  status?: 'ongoing' | 'ended';
-  duration?: number;
-}
-
-export interface IVideoCallHistory extends Document, VideoCallHistoryInput {
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 const VideoCallHistorySchema: Schema = new Schema({
   roomId: { type: String, required: true, index: true },

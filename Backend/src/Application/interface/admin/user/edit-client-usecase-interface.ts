@@ -1,5 +1,4 @@
-import { IEditClientUsecase } from "../../../../domain/dtos/user-usecase/edit-client-usecase-interface";
-import { EditClientDTO } from "../../../usecases/admin/Users/edit-client-usecase";
+import { EditClientDTO, IEditClientUsecase } from "../../../../domain/dtos/user-usecase/edit-client-usecase-interface";
 
 
 export interface IEditClientUseCase {

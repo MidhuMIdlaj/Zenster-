@@ -3,11 +3,9 @@ import IUserRepository from "../../../../domain/Repository/i-user-repository";
 import { TYPES } from "../../../../types";
 import { ResponseDTO } from "../../../../domain/dtos/Response";
 import IUpdateClientStatusUseCase from "../../../interface/admin/user/update-client-status-usecase-interface";
+import { UpdateClientStatusDTO } from "../../../../domain/dtos/user-usecase/update-client-status-usecase-interface";
 
-export interface UpdateClientStatusDTO {
-  clientId: string;
-  status: boolean;
-}
+
 
 
 @injectable()

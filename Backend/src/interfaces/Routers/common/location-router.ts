@@ -1,10 +1,12 @@
 import express from 'express';
-import LocationController from '../../controllers/common/location-controller';
 import { checkRole, verifyToken } from '../../../middleware/auth-middleware';
 import { asyncHandler } from '../../../middleware/async-handler';
+import { container } from '../../../infrastructure/DIContainer/container';
+import { TYPES } from '../../../types';
+import LocationController from '../../controllers/common/location-controller';
 
 const router = express.Router();
-const locationController = new LocationController();
+const locationController = container.get<LocationController>(TYPES.LocationController);
 
 // All location routes require authentication
 router.use(asyncHandler(verifyToken));

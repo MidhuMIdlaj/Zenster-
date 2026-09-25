@@ -149,6 +149,28 @@ import { IEndVideoCallUseCase } from '../../Application/interface/videocall/end-
 import { IGetCallHistoryUseCase } from '../../Application/interface/videocall/get-call-history-usecase-interface';
 import { ISendVideoCallInvitationsUseCase } from '../../Application/interface/videocall/send-videocall-invitasion-usecase-interface';
 import { IUpdateCallParticipantsUseCase } from '../../Application/interface/videocall/update-call-participens-usecase-inerface';
+import { IComplaintReassignmentScheduler } from '../../domain/Repository/i-shedule-available-mechanic-repository';
+import { ILocationRepository } from '../../domain/Repository/i-location-repository';
+import { LocationRepository } from '../repositories/location-repository';
+import { ILocationValidationService } from '../../domain/Repository/i-location-repository';
+import { LocationValidationService } from '../Services/location-validation-service';
+import { TrackLocationUseCase } from '../../Application/usecases/common/track-location-usecase';
+import { ITrackLocationUseCase } from '../../Application/interface/common/track-location-usecase-interface';
+import { IGetLocationHistoryUseCase } from '../../Application/interface/common/get-location-history-usecase-interface';
+import { GetLocationHistoryUseCase } from '../../Application/usecases/common/get-location-history-usecase';
+import { IGetCurrentLocationUseCase } from '../../Application/interface/common/get-current-location-usecase-interface';
+import { GetCurrentLocationUseCase } from '../../Application/usecases/common/get-current-location-usecase';
+import { IGetAllCurrentLocationsUseCase } from '../../Application/interface/common/get-all-current-locations-usecase-interface';
+import { GetAllCurrentLocationsUseCase } from '../../Application/usecases/common/get-all-current-locations-usecase';
+import { IGrantLocationPermissionUseCase } from '../../Application/interface/common/grant-location-permission-usecase-interface';
+import { GrantLocationPermissionUseCase } from '../../Application/usecases/common/grant-location-permission-usecase';
+import { IRevokeLocationPermissionUseCase } from '../../Application/interface/common/revoke-location-permission-usecase-interface';
+import { RevokeLocationPermissionUseCase } from '../../Application/usecases/common/revoke-location-permission-usecase';
+import { IGetLocationPermissionStatusUseCase } from '../../Application/interface/common/get-location-permission-status-usecase-interface';
+import { GetLocationPermissionStatusUseCase } from '../../Application/usecases/common/get-location-permission-status-usecase';
+import { IGetLocationStatisticsUseCase } from '../../Application/interface/common/get-location-statistics-usecase-interface';
+import { GetLocationStatisticsUseCase } from '../../Application/usecases/common/get-location-statistics-usecase';
+import LocationController from '../../interfaces/controllers/common/location-controller';
 
 const container = new Container();
 
@@ -163,16 +185,25 @@ container.bind<NotificationRepository>(TYPES.INotificationRepository).to(Notific
 container.bind<IEmailService>(TYPES.IEmailService).to(EmailService).inSingletonScope()
 container.bind<IChatAttachmentUploaderRepository>(TYPES.IChatAttachMent).to(ChatAttachmentUploader).inSingletonScope()
 container.bind<IComplaintAttachmentRepository>(TYPES.IComplaintAttachMent).to(ComplaintAttachmentUploader).inSingletonScope()
- 
-// Bindings for Use Cases
-//Admin Use Cases
-// Admin Use Cases(Employee)
-// container.bind<AddEmployeeUseCase>(TYPES.addEmployeeUsecases).to(AddEmployeeUseCase)
-// container.bind<SoftDeleteEmployeeUseCase>(TYPES.dleEmployeeUsecases).to(SoftDeleteEmployeeUseCase)
-// container.bind<EditEmployeeUseCase>(TYPES.editEmployeeUsecases).to(EditEmployeeUseCase)
-// container.bind<FindAllCoordinatorsUseCase>(TYPES.findAllcoordinatorsUsecases).to(FindAllCoordinatorsUseCase)
-//Admin Use Cases(Cleint)
 container.bind<IGetCustomerEmails>(TYPES.getCustomerEmailsUsecases).to(GetCustomerEmails)
+container
+  .bind<ILocationRepository>(
+    TYPES.ILocationRepository
+  )
+ .to(LocationRepository);
+  container.bind<ILocationValidationService>(TYPES.ILocationValidationService).to(LocationValidationService);
+
+  container.bind<ITrackLocationUseCase>(TYPES.TrackLocationUseCase).to(TrackLocationUseCase);
+  container.bind<IGetLocationHistoryUseCase>(TYPES.GetLocationHistoryUseCase).to(GetLocationHistoryUseCase);
+  container.bind<IGetCurrentLocationUseCase>(TYPES.GetCurrentLocationUseCase).to(GetCurrentLocationUseCase);
+  container.bind<IGetAllCurrentLocationsUseCase>(TYPES.GetAllCurrentLocationsUseCase).to(GetAllCurrentLocationsUseCase);
+  container.bind<IGrantLocationPermissionUseCase>(TYPES.GrantLocationPermissionUseCase).to(GrantLocationPermissionUseCase);
+  container.bind<IRevokeLocationPermissionUseCase>(TYPES.RevokeLocationPermissionUseCase).to(RevokeLocationPermissionUseCase);
+  container.bind<IGetLocationPermissionStatusUseCase>(TYPES.GetLocationPermissionStatusUseCase).to(GetLocationPermissionStatusUseCase);
+  container.bind<IGetLocationStatisticsUseCase>(TYPES.GetLocationStatisticsUseCase).to(GetLocationStatisticsUseCase);
+
+
+
 // Chat Use Cases
 container.bind<IAcceptComplaintUseCase>(TYPES.acceptComplaintUseCase).to(AcceptComplaint)
 container.bind<AssignComplaintUseCase>(TYPES.assignComplaintUseCase).to(AssignComplaintUseCase)
@@ -194,7 +225,6 @@ container.bind<IGetCoordinatorEmails>(TYPES.getCoordinatorEmails).to(GetCoordina
 container.bind<ILoginEmployeeUseCase>(TYPES.loginEmployeeUsecases).to(LoginEmployeeUseCase)
 container.bind<IResetPasswordRequestEmployeeUseCase>(TYPES.employeeResetPasswordRequestUsecases).to(ResetPasswordRequestEmployeeUseCase)
 container.bind<IResetPasswordEmployeeUseCase>(TYPES.employeeResetPasswordUsecases).to(ResetPasswordEmployeeUseCase)
-
 
 //Notification use cases 
 container.bind<IGetNotificationsForUserUseCase>(TYPES.GetNotificationsForUserUseCase).to(GetNotificationsForUserUseCase)
@@ -259,6 +289,7 @@ container.bind<ComplaintController>(TYPES.ComplaintController).to(ComplaintContr
 container.bind<NotificationController>(TYPES.NotificationController).to(NotificationController)
 container.bind<VideoCallHistoryController>(TYPES.VideoCallHistoryController).to(VideoCallHistoryController)
 container.bind<VideoCallController>(TYPES.VideoCallController).to(VideoCallController)
+container.bind<LocationController>(TYPES.LocationController).to(LocationController)
 //EmployeeAuth
 container.bind<EmployeeAuthController>(TYPES.EmployeeAuthController).to(EmployeeAuthController)
 
@@ -266,8 +297,8 @@ container.bind<EmployeeAuthController>(TYPES.EmployeeAuthController).to(Employee
 // Service
 container.bind<EmailService>(TYPES.EmailService).to(EmailService)
 container.bind<NotificationRepository>(TYPES.NotificationService).to(NotificationRepository)
-container.bind<ChatAttachmentUploader>(TYPES.ChatAttachmentUploader).to(ChatAttachmentUploader),
-container.bind<ComplaintAttachmentUploader>(TYPES.ComplaintAttachmentUploader).to(ComplaintAttachmentUploader)
-container.bind<ComplaintReassignmentScheduler>(TYPES.ComplaintReassignmentScheduler).to(ComplaintReassignmentScheduler)
+container.bind<IComplaintReassignmentScheduler>(TYPES.ComplaintReassignmentScheduler).to(ComplaintReassignmentScheduler)
+
+
 
 export { container };

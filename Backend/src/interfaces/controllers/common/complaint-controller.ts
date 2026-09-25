@@ -5,7 +5,7 @@ import GetCustomerEmails from '../../../Application/usecases/admin/Users/get-cus
 import GetCoordinatorEmails from '../../../Application/usecases/employee/get-coordinator-email-usecase';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../types';
-import { ComplaintAttachmentUploader } from '../../../infrastructure/Services/s3-credential-service';
+import { IComplaintAttachmentRepository } from '../../../domain/Repository/i-complaint-attachment-upload-repository';
 import IGetEmployeeProfileUseCase from '../../../Application/interface/admin/employee/get-employee-profile-usecase-interface';
 import { IAcceptComplaintUseCase } from '../../../Application/interface/common/accept-complaint-usecase-interface';
 import { IChangeStatusUseCase } from '../../../Application/interface/common/change-status-usecase-interface';
@@ -42,8 +42,8 @@ export default class ComplaintController {
      @inject(TYPES.changeStatusUseCase) private ChangeStatusUseCase : IChangeStatusUseCase,
      @inject(TYPES.deleteComplaintUseCase) private deleteComplaintUseCase : IDeleteComplaintUseCase,
      @inject(TYPES.updateComplaintStatusUsecase) private updateComplaintStatusUsecase : IUpdateComplaintStatusUseCase,
-     @inject(TYPES.completeTaskUseCase) private completeTaskUseCase : ICompleteTaskUseCase,
-     @inject(TYPES.ComplaintAttachmentUploader) private ComplaintAttachmentUploader : ComplaintAttachmentUploader
+    @inject(TYPES.completeTaskUseCase) private completeTaskUseCase : ICompleteTaskUseCase,
+    @inject(TYPES.IComplaintAttachMent) private complaintAttachmentUploader : IComplaintAttachmentRepository
   ){} 
 
 
@@ -358,7 +358,7 @@ completeTask = async (req: Request, res: Response) => {
     }
     let photoUrls: string[] = [];
     for (const file of files || []) {
-      const url = await this.ComplaintAttachmentUploader.uploadFile(file);
+      const url = await this.complaintAttachmentUploader.uploadFile(file);
       photoUrls.push(url);
     }
 

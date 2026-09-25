@@ -1,18 +1,14 @@
 import axios from 'axios';
 import { environment } from '../../config/environment';
+import { ILocationValidationService } from '../../domain/Repository/i-location-repository';
+import { injectable } from 'inversify';
 
-export class LocationValidationService {
-  /**
-   * Validate location coordinates
-   * Check if coordinates are within valid ranges
-   */
-  static validateCoordinates(
+@injectable()
+export class LocationValidationService implements ILocationValidationService {
+  validateCoordinates(
     latitude: number,
     longitude: number
   ): { valid: boolean; error?: string } {
-    // Latitude range: -90 to 90
-    // Longitude range: -180 to 180
-
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return { valid: false, error: 'Coordinates must be numbers' };
     }
@@ -28,11 +24,7 @@ export class LocationValidationService {
     return { valid: true };
   }
 
-  /**
-   * Reverse geocode to get address from coordinates
-   * Uses Google Maps Geocoding API
-   */
-  static async getAddressFromCoordinates(
+  async getAddressFromCoordinates(
     latitude: number,
     longitude: number
   ): Promise<string | null> {
@@ -67,10 +59,8 @@ export class LocationValidationService {
     }
   }
 
-  /**
-   * Check if location is realistic (not teleporting too fast)
-   */
-  static validateLocationRealistic(
+
+  validateLocationRealistic(
     previousLocation: {
       latitude: number;
       longitude: number;
@@ -83,7 +73,7 @@ export class LocationValidationService {
     }
   ): { valid: boolean; reason?: string } {
     try {
-      const distance = this.calculateDistance(
+      const distance = LocationValidationService.calculateDistance(
         previousLocation.latitude,
         previousLocation.longitude,
         currentLocation.latitude,
@@ -112,10 +102,7 @@ export class LocationValidationService {
     }
   }
 
-  /**
-   * Haversine formula to calculate distance between two points
-   * Returns distance in kilometers
-   */
+
   static calculateDistance(
     lat1: number,
     lon1: number,
@@ -137,33 +124,27 @@ export class LocationValidationService {
     return R * c; // Distance in km
   }
 
-  /**
-   * Get last known location of employee
-   */
+
   static async getLastKnownLocation(employeeId: string) {
     // This will be implemented with repository pattern
     return null;
   }
 
-  /**
-   * Validate accuracy is reasonable
-   */
-  static validateAccuracy(accuracy: number): boolean {
+ 
+  validateAccuracy(accuracy: number): boolean {
     // Accuracy in meters - should be between 0 and 5000m (5km)
     return accuracy >= 0 && accuracy <= 5000;
   }
 
-  /**
-   * Check if coordinates are in a geofence
-   */
-  static isLocationInGeofence(
+
+  isLocationInGeofence(
     latitude: number,
     longitude: number,
     centerLat: number,
     centerLon: number,
     radiusKm: number
   ): boolean {
-    const distance = this.calculateDistance(latitude, longitude, centerLat, centerLon);
+    const distance = LocationValidationService.calculateDistance(latitude, longitude, centerLat, centerLon);
     return distance <= radiusKm;
   }
 }

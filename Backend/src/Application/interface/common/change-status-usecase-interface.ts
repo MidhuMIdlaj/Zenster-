@@ -1,4 +1,4 @@
-import { IChangeStatusUsecase } from "../../../domain/dtos/complaint-usecase/change-status-usecase-interface";
+import { IChangeStatusUsecaseDto } from "../../../domain/dtos/complaint-usecase/change-status-usecase-interface";
 
 
 export interface IChangeStatusUseCase {
@@ -6,5 +6,5 @@ export interface IChangeStatusUseCase {
     complaintId: string,
     newStatus: string,
     mechanicId: string
-  ): Promise<IChangeStatusUsecase>;
+  ): Promise<IChangeStatusUsecaseDto>;
 }

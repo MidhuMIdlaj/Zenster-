@@ -1,5 +1,4 @@
-import { ISavedMessageUsecase } from "../../../domain/dtos/Chat-usecase/save-message-usecase-interface";
-import { SaveMessageInput } from "../../usecases/chat/save-message-usecase";
+import { ISavedMessageUsecase, SaveMessageInput } from "../../../domain/dtos/Chat-usecase/save-message-usecase-interface";
 
 export interface ISaveMessageUseCase {
   execute(input: SaveMessageInput): Promise<ISavedMessageUsecase>;

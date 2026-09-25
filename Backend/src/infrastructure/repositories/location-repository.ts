@@ -2,13 +2,14 @@ import EmployeeLocation, { IEmployeeLocation } from '../db/models/employee-locat
 import LocationPermission, { ILocationPermission } from '../db/models/location-permission.model';
 import EmployeeModel from '../db/models/employee.model';
 import { LocationValidationService } from '../Services/location-validation-service';
+import { ILocationRepository } from '../../domain/Repository/i-location-repository';
+import { injectable } from 'inversify';
 
 type UnknownRecord = Record<string, unknown>;
 
-export class LocationRepository {
-  /**
-   * Save employee location
-   */
+@injectable()
+export class LocationRepository implements ILocationRepository {
+  
   async saveLocation(locationData: {
     employeeId: string;
     latitude: number;

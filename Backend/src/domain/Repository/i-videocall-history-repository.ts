@@ -1,4 +1,4 @@
-import { IVideoCallHistory, VideoCallHistoryInput, VideoCallParticipant } from "../../infrastructure/db/models/videocall.history.model";
+import { IVideoCallHistory, VideoCallHistoryInput, VideoCallParticipant } from "../dtos/videocall/video-call-history-usecase-interface";
 
 export interface IVideoCallHistoryRepository {
   create(callRecord: VideoCallHistoryInput): Promise<IVideoCallHistory>;

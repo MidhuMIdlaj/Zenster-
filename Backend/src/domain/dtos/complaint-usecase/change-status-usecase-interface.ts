@@ -1,4 +1,4 @@
-export interface IChangeStatusUsecase{
+export interface IChangeStatusUsecaseDto{
   acknowledged?: boolean;
   matchedCount: number;
   modifiedCount?: number;

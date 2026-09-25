@@ -1,12 +1,12 @@
 import { inject, injectable } from "inversify";
-import { IAddEmployeeUseCase } from "../../../../Application/interface/admin/employee/add-employee-usecase-interface";
+import { IAddEmployeeUseCase } from "../../../interface/admin/employee/add-employee-usecase-interface";
 import { IAddEmployeeDTO } from "../../../../domain/dtos/Employee-usecase/add-employee-usecase-interface";
 import { TYPES } from "../../../../types";
 import IEmployeeRepository from "../../../../domain/Repository/i-employee-repository";
 import { ValidationError } from "../../../../domain/error/complaintError";
 import { ResponseDTO } from "../../../../domain/dtos/Response";
 import { StatusCode } from "../../../../shared/enums/statusCode";
-import { Types } from "twilio/lib/rest/content/v1/content";
+
 
 @injectable()
 export class AddEmployeeUseCase implements IAddEmployeeUseCase {

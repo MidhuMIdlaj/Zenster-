@@ -1,5 +1,5 @@
-import { IVideoCallHistory } from "../../../infrastructure/db/models/videocall.history.model";
+import { IVideoCallHistoryRepository } from "../../../domain/Repository/i-videocall-history-repository";
 
 export interface IGetCallHistoryUseCase {
-  execute(): Promise<IVideoCallHistory[]>;
+  execute(): Promise<IVideoCallHistoryRepository[]>;
 }

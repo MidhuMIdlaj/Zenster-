@@ -1,6 +1,5 @@
 import { injectable, inject } from "inversify";
 import IEmployeeRepository from "../../../domain/Repository/i-employee-repository";
-import Employee from "../../../domain/entities/Employee";
 import { TYPES } from "../../../types";
 import { ISafeEmployee } from "../../../domain/dtos/Employee-usecase/safe-employee-interface";
 import { IFindBestMechanicUseCase } from "../../interface/employee/find-best-mechanic-usecase-interface";

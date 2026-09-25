@@ -1,26 +1,34 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCode } from '../../../shared/enums/statusCode';
 import { sendError, sendSuccess } from '../../../shared/response';
-import { injectable } from 'inversify';
-import { LocationRepository } from '../../../infrastructure/repositories/location-repository';
-import { LocationValidationService } from '../../../infrastructure/Services/location-validation-service';
+import { inject, injectable } from 'inversify';
+import { TYPES } from '../../../types';
+import { AppError } from '../../../domain/error/employeeErrors';
+import { ITrackLocationUseCase } from '../../../Application/interface/common/track-location-usecase-interface';
+import { IGetLocationHistoryUseCase } from '../../../Application/interface/common/get-location-history-usecase-interface';
+import { IGetCurrentLocationUseCase } from '../../../Application/interface/common/get-current-location-usecase-interface';
+import { IGetAllCurrentLocationsUseCase } from '../../../Application/interface/common/get-all-current-locations-usecase-interface';
+import { IGrantLocationPermissionUseCase } from '../../../Application/interface/common/grant-location-permission-usecase-interface';
+import { IRevokeLocationPermissionUseCase } from '../../../Application/interface/common/revoke-location-permission-usecase-interface';
+import { IGetLocationPermissionStatusUseCase } from '../../../Application/interface/common/get-location-permission-status-usecase-interface';
+import { IGetLocationStatisticsUseCase } from '../../../Application/interface/common/get-location-statistics-usecase-interface';
 
 @injectable()
 export default class LocationController {
-  private locationRepository: LocationRepository;
-
-  constructor() {
-    this.locationRepository = new LocationRepository();
-  }
-
-  /**
-   * Track employee location
-   * POST /api/location/track
-   */
+  constructor(
+    @inject(TYPES.TrackLocationUseCase) private readonly trackLocationUseCase: ITrackLocationUseCase,
+    @inject(TYPES.GetLocationHistoryUseCase) private readonly getLocationHistoryUseCase: IGetLocationHistoryUseCase,
+    @inject(TYPES.GetCurrentLocationUseCase) private readonly getCurrentLocationUseCase: IGetCurrentLocationUseCase,
+    @inject(TYPES.GetAllCurrentLocationsUseCase) private readonly getAllCurrentLocationsUseCase: IGetAllCurrentLocationsUseCase,
+    @inject(TYPES.GrantLocationPermissionUseCase) private readonly grantLocationPermissionUseCase: IGrantLocationPermissionUseCase,
+    @inject(TYPES.RevokeLocationPermissionUseCase) private readonly revokeLocationPermissionUseCase: IRevokeLocationPermissionUseCase,
+    @inject(TYPES.GetLocationPermissionStatusUseCase) private readonly getLocationPermissionStatusUseCase: IGetLocationPermissionStatusUseCase,
+    @inject(TYPES.GetLocationStatisticsUseCase) private readonly getLocationStatisticsUseCase: IGetLocationStatisticsUseCase
+  ) {}
+  
   trackLocation = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { latitude, longitude, accuracy, provider } = req.body;
-      // Get employeeId from authenticated user (set by verifyToken middleware)
       const authReq = req as Request & { user?: { userId?: string }; employee?: { id?: string } };
       const employeeId = authReq.user?.userId || authReq.employee?.id;
 
@@ -29,73 +37,20 @@ export default class LocationController {
         return;
       }
 
-      // Validate coordinates
-      const coordinateValidation = LocationValidationService.validateCoordinates(
-        latitude,
-        longitude
-      );
-      if (!coordinateValidation.valid) {
-        sendError(res, coordinateValidation.error ?? 'Invalid coordinates', StatusCode.BAD_REQUEST);
-        return;
-      }
-
-      // Validate accuracy
-      if (!LocationValidationService.validateAccuracy(accuracy)) {
-        sendError(res, 'Invalid accuracy (must be between 0 and 5000 meters)', StatusCode.BAD_REQUEST);
-        return;
-      }
-
-      // Check if employee has permission
-      const hasPermission = await this.locationRepository.hasPermission(employeeId);
-      if (!hasPermission) {
-        sendError(res, 'Employee has not granted tracking permission', StatusCode.FORBIDDEN);
-        return;
-      }
-
-      // Get previous location for realistic movement validation
-      const previousLocation = await this.locationRepository.getCurrentLocation(employeeId);
-
-      if (previousLocation) {
-        const movementValidation = LocationValidationService.validateLocationRealistic(
-          {
-            latitude: previousLocation.latitude,
-            longitude: previousLocation.longitude,
-            timestamp: previousLocation.timestamp,
-          },
-          {
-            latitude,
-            longitude,
-            timestamp: new Date(),
-          }
-        );
-
-        if (!movementValidation.valid) {
-          sendError(res, movementValidation.reason ?? 'Unrealistic movement detected', StatusCode.BAD_REQUEST);
-          return;
-        }
-      }
-
-      // Get address
-      const address = await LocationValidationService.getAddressFromCoordinates(
-        latitude,
-        longitude
-      );
-
-      // Save location
-      const savedLocation = await this.locationRepository.saveLocation({
+      const savedLocation = await this.trackLocationUseCase.execute({
         employeeId,
         latitude,
         longitude,
         accuracy,
-        address: address || undefined,
-        provider: provider || 'browser-geolocation',
+        provider,
       });
-
-      // Update last tracking time
-      await this.locationRepository.updateLastTrackingTime(employeeId);
 
       sendSuccess(res, savedLocation, 'Location tracked successfully', StatusCode.OK);
     } catch (error) {
+      if (error instanceof AppError) {
+        sendError(res, error.message, error.statusCode as StatusCode);
+        return;
+      }
       next(error);
     }
   };
@@ -109,7 +64,7 @@ export default class LocationController {
       const { employeeId } = req.params;
       const hours = parseInt(req.query.hours as string) || 24;
 
-      const history = await this.locationRepository.getLocationHistory(employeeId, hours);
+      const history = await this.getLocationHistoryUseCase.execute(employeeId, hours);
 
       sendSuccess(res, {
         employeeId,
@@ -130,7 +85,7 @@ export default class LocationController {
     try {
       const { employeeId } = req.params;
 
-      const currentLocation = await this.locationRepository.getCurrentLocation(employeeId);
+      const currentLocation = await this.getCurrentLocationUseCase.execute(employeeId);
 
       if (!currentLocation) {
         sendError(res, 'No location found for this employee', StatusCode.NOT_FOUND);
@@ -149,7 +104,7 @@ export default class LocationController {
    */
   getAllCurrentLocations = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const locations = await this.locationRepository.getCurrentLocationsOfAllEmployees();
+      const locations = await this.getAllCurrentLocationsUseCase.execute();
       sendSuccess(res, { totalLocations: locations.length, locations }, 'All current locations retrieved successfully', StatusCode.OK);
     } catch (error) {
       next(error);
@@ -170,7 +125,7 @@ export default class LocationController {
         return;
       }
 
-      const permission = await this.locationRepository.grantPermission(employeeId);
+      const permission = await this.grantLocationPermissionUseCase.execute(employeeId);
       sendSuccess(res, permission, 'Location tracking permission granted', StatusCode.OK);
     } catch (error) {
       next(error);
@@ -192,7 +147,7 @@ export default class LocationController {
         return;
       }
 
-      const permission = await this.locationRepository.revokePermission(employeeId);
+      const permission = await this.revokeLocationPermissionUseCase.execute(employeeId);
 
       sendSuccess(res, permission, 'Location tracking permission revoked', StatusCode.OK);
     } catch (error) {
@@ -214,7 +169,7 @@ export default class LocationController {
         return;
       }
 
-      const permission = await this.locationRepository.getPermissionStatus(employeeId);
+      const permission = await this.getLocationPermissionStatusUseCase.execute(employeeId);
 
       sendSuccess(res, permission, 'Permission status retrieved successfully', StatusCode.OK);
     } catch (error) {
@@ -231,7 +186,7 @@ export default class LocationController {
       const { employeeId } = req.params;
       const hours = parseInt(req.query.hours as string) || 24;
 
-      const statistics = await this.locationRepository.getLocationStatistics(employeeId, hours);
+      const statistics = await this.getLocationStatisticsUseCase.execute(employeeId, hours);
 
       sendSuccess(res, statistics, 'Location statistics retrieved successfully', StatusCode.OK);
     } catch (error) {

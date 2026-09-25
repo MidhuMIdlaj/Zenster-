@@ -5,8 +5,6 @@ import { IGetUnreadChatNotificationsResponse } from "../../../domain/dtos/notifi
 import { IGetUnreadChatNotificationsUseCase } from "../../interface/notification/get-unread-chat-notification-usecase-interface";
 
 
-
-
 @injectable()
 export default class GetUnreadChatNotificationsUseCase implements IGetUnreadChatNotificationsUseCase {
   constructor(
@@ -21,6 +19,8 @@ export default class GetUnreadChatNotificationsUseCase implements IGetUnreadChat
       };
     }
 
-    return this.notificationRepo.getUnreadChatNotifications(userId, role);
+    const repositoryResponse = await this.notificationRepo.getUnreadChatNotifications(userId, role);
+
+    return repositoryResponse as unknown as IGetUnreadChatNotificationsResponse;
   }
 }

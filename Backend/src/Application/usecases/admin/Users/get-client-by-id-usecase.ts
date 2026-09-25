@@ -1,7 +1,7 @@
 import { inject, injectable } from "inversify";
 import IUserRepository from "../../../../domain/Repository/i-user-repository";
 import { TYPES } from "../../../../types";
-import { IGetClientByIdUsecase } from "../../../../domain/dtos/user-usecase/get-client-by-id-usecase-interface";
+import { IGetClientByIdUsecaseDto } from "../../../../domain/dtos/user-usecase/get-client-by-id-usecase-interface";
 import { IGetClientByIdUseCase } from "../../../interface/admin/user/get-client-by-id-usecase-interface";
 
 
@@ -11,7 +11,7 @@ export class GetClientByIdUseCase  implements IGetClientByIdUseCase{
         @inject(TYPES.IUserRepository) private clientRepo : IUserRepository
      ){}
 
-  async execute(id: string): Promise<IGetClientByIdUsecase | null> {
+  async execute(id: string): Promise<IGetClientByIdUsecaseDto | null> {
     if (!id) {
       throw new Error("Client ID is required");
     }

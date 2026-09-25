@@ -18,13 +18,20 @@
     EmailService: Symbol.for("EmailService"),
     NotificationService: Symbol.for("NotificationService"),
     TokenService: Symbol.for("TokenService"),
-    ChatAttachmentUploader: Symbol.for("ChatAttachmentUploader"),
-    ComplaintAttachmentUploader : Symbol.for("ComplaintAttachmentUploader"),
     ComplaintReassignmentScheduler : Symbol.for("ComplaintReassignmentScheduler"),
-    
+    ILocationRepository:Symbol.for("ILocationRepository"),
+    ILocationValidationService:Symbol.for("ILocationValidationService"),
+    TrackLocationUseCase:Symbol.for("TrackLocationUseCase"),
+   GetLocationHistoryUseCase: Symbol.for("GetLocationHistoryUseCase"),
+   GetCurrentLocationUseCase: Symbol.for("GetCurrentLocationUseCase"),
+   GetAllCurrentLocationsUseCase: Symbol.for("GetAllCurrentLocationsUseCase"),
+   GrantLocationPermissionUseCase: Symbol.for("GrantLocationPermissionUseCase"),
+   RevokeLocationPermissionUseCase: Symbol.for("RevokeLocationPermissionUseCase"),
+   GetLocationPermissionStatusUseCase: Symbol.for("GetLocationPermissionStatusUseCase"),
+   GetLocationStatisticsUseCase: Symbol.for("GetLocationStatisticsUseCase"),
+    LocationController:Symbol.for("LocationController"),
 
-
-    // -------------------- Use Cases --------------------
+       // -------------------- Use Cases --------------------
     // Admin
     adminAuthUseCase: Symbol.for("adminAuthUseCase"),
     AdminResetPasswordRequestUseCase: Symbol.for("resetPasswordRequestUseCase"),

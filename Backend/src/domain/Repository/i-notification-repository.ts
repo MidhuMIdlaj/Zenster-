@@ -1,19 +1,8 @@
 import { IComplaintRepoReturn } from '../dtos/complaint-usecase/create-complaint-usecase-interface';
 import { IGetNotificationsForUserOutput } from '../dtos/notification-usecase/get-notification-for-user-usecase-interface';
 import { ISendNewComplaintNotification } from '../dtos/notification-usecase/send-new-complaint-notification-interface';
-import { INotification } from '../../infrastructure/db/models/notification.model';
 import { IMarkChatNotificationAsReadResult } from '../dtos/notification-usecase/mark-notification-as-read-interface';
-
-// export interface INotification extends Document {
-//   userId: string;
-//   type: string;
-//   content: string;
-//   isRead: boolean;
-//   createdAt: Date;
-//   conversationId?: string;
-//   recipientId: string;
-//   __v?: number;  
-// }
+import { INotification } from '../dtos/notification-usecase/i-notification-interface';
 
 
 export interface INotificationRepository {

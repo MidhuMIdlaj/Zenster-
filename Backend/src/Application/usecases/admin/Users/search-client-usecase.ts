@@ -1,5 +1,4 @@
 import { inject, injectable } from "inversify";
-import Client from "../../../../domain/entities/User";
 import IUserRepository from "../../../../domain/Repository/i-user-repository";
 import { TYPES } from "../../../../types";
 import { ISafeUserUsecase } from "../../../../domain/dtos/user-usecase/globel-user-interface";

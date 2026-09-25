@@ -1,29 +1,18 @@
 import { inject, injectable } from "inversify";
 import IUserRepository from "../../../domain/Repository/i-user-repository";
 import { TYPES } from "../../../types";
-import { Product } from "../../../domain/entities/User";
-import { IFindCustomerByEmailUsecase } from "../../../domain/dtos/complaint-usecase/find-customer-by-email-usecase-interface";
+import { IFindCustomerByEmailUsecaseDto } from "../../../domain/dtos/complaint-usecase/find-customer-by-email-usecase-interface";
 import IFindCustomerByEmailUseCase from "../../interface/common/find-customer-by-email-usecase-interface";
+import { CustomerResponseDTO } from "../../../domain/dtos/user-usecase/customer-response-usecase-interface";
 
-export interface CustomerResponseDTO {
-  id: string;
-  name: string;
-  email: string;
-  address: string;
-  status: string;
-  productName: string | null;
-  model: string | null;
-  warrantyDate: Date | null;
-  guaranteeDate: Date | null;
-  products: Product[];
-}
+
 
 @injectable()
 export class FindCustomerByEmailUseCase implements IFindCustomerByEmailUseCase {
   constructor(
     @inject(TYPES.IUserRepository) private customerRepo: IUserRepository
   ) {}
-  async execute(email: string): Promise<IFindCustomerByEmailUsecase> {
+  async execute(email: string): Promise<IFindCustomerByEmailUsecaseDto> {
     if (!email) {
       throw new Error("Email is required");
     }

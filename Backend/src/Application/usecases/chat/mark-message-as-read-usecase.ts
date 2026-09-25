@@ -1,7 +1,7 @@
 import { inject, injectable } from "inversify";
 import { IChatRepository } from "../../../domain/Repository/i-chat-repository";
 import { TYPES } from "../../../types";
-import { IMarkMessagesAsReadUsecase } from "../../../domain/dtos/Chat-usecase/mark-message-as-read-usecase-interface";
+import { IMarkMessagesAsReadUsecaseDto } from "../../../domain/dtos/Chat-usecase/mark-message-as-read-usecase-interface";
 import { IMarkMessagesAsReadUseCase } from "../../interface/chat/mark-message-as-read-usecase-interface";
 
 interface MarkMessagesAsReadParams {
@@ -16,7 +16,7 @@ export default class MarkMessagesAsReadUseCase implements IMarkMessagesAsReadUse
       @inject(TYPES.IChatRepository) private  chatRepo : IChatRepository
    ) {}
 
-  async execute({ conversationId, userId }: MarkMessagesAsReadParams): Promise<IMarkMessagesAsReadUsecase> {
+  async execute({ conversationId, userId }: MarkMessagesAsReadParams): Promise<IMarkMessagesAsReadUsecaseDto> {
     if (!conversationId || !userId) {
       throw new Error("Missing required parameters: conversationId or userId");
     }

@@ -1,4 +1,4 @@
-import { ICompleteTaskUsecase } from "../../../domain/dtos/complaint-usecase/complete-task-usecase-interface";
+import { ICompleteTaskUsecaseDto } from "../../../domain/dtos/complaint-usecase/complete-task-usecase-interface";
 
 export interface ICompleteTaskUseCase {
   execute(
@@ -9,5 +9,5 @@ export interface ICompleteTaskUseCase {
     paymentStatus?: string,
     amount?: number,
     paymentMethod?: string
-  ): Promise<ICompleteTaskUsecase | null>;
+  ): Promise<ICompleteTaskUsecaseDto | null>;
 }

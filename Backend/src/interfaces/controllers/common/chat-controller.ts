@@ -2,11 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { StatusCode } from '../../../shared/enums/statusCode';
 import { sendError, sendSuccess } from '../../../shared/response';
 import { io } from '../../../server';
-import { IAttachment } from '../../../domain/Repository/i-chat-repository';
 import { getSocketInstance } from '../../../app';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../types';
-import { ChatAttachmentUploader } from '../../../infrastructure/Services/s3-uploads-service';
 import { IGetConversationsUseCase } from '../../../Application/interface/chat/get-conversation-usecase-interface';
 import { IGetChatHistoryUseCase } from '../../../Application/interface/chat/get-history-usecase-interface';
 import { IMarkMessagesAsReadUseCase } from '../../../Application/interface/chat/mark-message-as-read-usecase-interface';
@@ -22,8 +20,7 @@ export class ChatController {
     @inject(TYPES.getChatHistoryUseCase) private getChatHistoryUseCase : IGetChatHistoryUseCase,
     @inject(TYPES.getConversationsUsecase) private getConversationsUsecase : IGetConversationsUseCase,
     @inject(TYPES.saveMessageUseCase) private saveMessageUseCase : ISaveMessageUseCase,
-    @inject(TYPES.MarkMessagesAsReadUseCase) private MarkMessagesAsReadUseCase : IMarkMessagesAsReadUseCase,
-    @inject(TYPES.ChatAttachmentUploader) private ChatAttachmentUploader : ChatAttachmentUploader
+    @inject(TYPES.MarkMessagesAsReadUseCase) private MarkMessagesAsReadUseCase : IMarkMessagesAsReadUseCase
   ){}
 
 
@@ -62,27 +59,6 @@ export class ChatController {
         return;
       }
 
-      const attachments: IAttachment[] = [];
-      if (files && files.length > 0) {
-        for (const file of files) {
-          const url = await this.ChatAttachmentUploader.upload(file);
-          attachments.push({
-            url,
-            type: file.mimetype,
-            name: file.originalname,
-            size: file.size,
-          });
-        }
-      }
-
-      let finalMessageType = messageType || 'text';
-      if (attachments.length > 0) {
-        finalMessageType = 'file';
-      } else if (!messageType && text) {
-        if (/urgent|asap|immediately|important/i.test(text)) finalMessageType = 'urgent';
-        if (/task|todo|action item/i.test(text)) finalMessageType = 'task';
-      }
-
       const savedMessage = await this.saveMessageUseCase.execute({
         senderId,
         receiverId,
@@ -90,8 +66,8 @@ export class ChatController {
         conversationId,
         senderRole,
         receiverRole,
-        messageType: finalMessageType,
-        attachments: attachments.length > 0 ? attachments : undefined,
+        messageType,
+        files,
       });
 
       const io = getSocketInstance();
@@ -112,7 +88,7 @@ export class ChatController {
         receiverId,
         senderId,
         senderName,
-        text || (attachments.length > 0 ? 'File attachment' : ''),
+        text || (files && files.length > 0 ? 'File attachment' : ''),
         conversationId,
         receiverRole,
         senderRole

@@ -1,7 +1,6 @@
-import { Types } from "mongoose";
 
 export type MechanicAssignment = {
-  mechanicId: Types.ObjectId;
+  mechanicId: string;
   status: 'accept' | 'reject' | 'pending';
   reason?: string | null;
 };

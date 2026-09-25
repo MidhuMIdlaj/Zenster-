@@ -1,8 +1,8 @@
 import { inject, injectable } from "inversify";
 import { IVideoCallHistoryRepository } from "../../../domain/Repository/i-videocall-history-repository";
-import { IVideoCallHistory, VideoCallHistoryInput } from "../../../infrastructure/db/models/videocall.history.model";
 import { TYPES } from "../../../types";
 import { ICreateVideoCallRecordUseCase } from "../../interface/videocall/create-videocall-record-usecase-interface";
+import { IVideoCallHistory, VideoCallHistoryInput } from "../../../domain/dtos/videocall/video-call-history-usecase-interface";
 
 
 
@@ -14,12 +14,14 @@ export class CreateVideoCallRecordUseCase implements ICreateVideoCallRecordUseCa
     this.videoCallHistoryRepo = videoCallHistoryRepo;
   }
 
-  async execute(callRecord: VideoCallHistoryInput): Promise<IVideoCallHistory> {
-    if (!callRecord.roomId) {
+  async execute(callRecord: IVideoCallHistoryRepository): Promise<IVideoCallHistoryRepository> {
+    const videoCallInput = callRecord as unknown as VideoCallHistoryInput;
+
+    if (!videoCallInput.roomId) {
       throw new Error("Room ID is required");
     }
 
-    const createdRecord = await this.videoCallHistoryRepo.create(callRecord);
-    return createdRecord;
+    const createdRecord = await this.videoCallHistoryRepo.create(videoCallInput);
+    return createdRecord as unknown as IVideoCallHistoryRepository;
   }
 }

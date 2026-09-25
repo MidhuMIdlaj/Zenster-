@@ -1,4 +1,5 @@
-import { INotification } from "../../../infrastructure/db/models/notification.model";
+import { INotification } from "./i-notification-interface";
+
 
 export interface IMarkChatNotificationAsReadResult {
   success: boolean;

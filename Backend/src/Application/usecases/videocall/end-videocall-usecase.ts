@@ -1,9 +1,9 @@
 import { inject, injectable } from "inversify";
 import { ValidationError } from "../../../domain/error/employeeErrors";
 import { IVideoCallHistoryRepository } from "../../../domain/Repository/i-videocall-history-repository";
-import { IVideoCallHistory } from "../../../infrastructure/db/models/videocall.history.model";
 import { TYPES } from "../../../types";
 import { IEndVideoCallUseCase } from "../../interface/videocall/end-videocall-usecase-interface";
+import { IVideoCallHistory } from "../../../domain/dtos/videocall/video-call-history-usecase-interface";
 
 
 @injectable()
@@ -12,7 +12,7 @@ export class EndVideoCallUseCase implements IEndVideoCallUseCase {
     @inject(TYPES.IVideoCallRepository) private videoCallHistoryRepo: IVideoCallHistoryRepository
   ) {}
 
-  async execute(roomId: string): Promise<IVideoCallHistory> {
+  async execute(roomId: string): Promise<IVideoCallHistoryRepository> {
     if (!roomId) {
       throw new ValidationError("Room ID is required");
     }
@@ -23,7 +23,7 @@ export class EndVideoCallUseCase implements IEndVideoCallUseCase {
     }
 
     if (call.status === "ended") {
-      return call; // Already ended, return as is
+      return call as unknown as IVideoCallHistoryRepository; // Already ended, return as is
     }
 
     const endedAt = new Date();
@@ -34,6 +34,8 @@ export class EndVideoCallUseCase implements IEndVideoCallUseCase {
     call.status = "ended";
     call.duration = durationInSeconds;
 
-    return await call.save();
+    return (await (call as IVideoCallHistory & {
+      save: () => Promise<IVideoCallHistory>;
+    }).save()) as unknown as IVideoCallHistoryRepository;
   }
 }

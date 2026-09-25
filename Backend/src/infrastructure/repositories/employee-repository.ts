@@ -10,7 +10,7 @@ import { TYPES } from "../../types";
 import { IGetAllEmployeesUseCase } from "../../domain/dtos/Employee-usecase/get-all-employee-usecase-interface";
 import { IEditEmployeeUsecase } from "../../domain/dtos/Employee-usecase/edit-employee-usecase-interface";
 import { IFindAllCoordinatorAndMechanic } from "../../domain/dtos/Employee-usecase/find-all-coordinator-usecase";
-import { IGetEmployeeProfileUsecase } from "../../domain/dtos/Employee-usecase/get-employee-profile-usecase-interface";
+import { IGetEmployeeProfileUsecaseDto } from "../../domain/dtos/Employee-usecase/get-employee-profile-usecase-interface";
 import { IGetAvailableMechanicUsecase } from "../../domain/dtos/complaint-usecase/get-available-mechanic-usecase-interface";
 import { ComplaintReassignmentScheduler } from "../Services/scheduler-service";
 import { ISafeEmployee } from "../../domain/dtos/Employee-usecase/safe-employee-interface";
@@ -306,15 +306,21 @@ export default class EmployeeRepoImpl extends BaseRepository<any> implements Emp
     return result ? this.toDomainEntity(result) : null;
   }
 
-  async findCoordinators() {
-    return await EmployeeModel.find(
+  async findCoordinators(): Promise<{ _id: string; emailId: string; employeeName?: string }[]> {
+    const coordinators = await EmployeeModel.find(
       {
         position: "coordinator",
         isDeleted: false,
         status: "active"
       },
       { emailId: 1, employeeName: 1, _id: 1 }
-    );
+    ).lean();
+
+    return coordinators.map(coordinator => ({
+      _id: coordinator._id.toString(),
+      emailId: coordinator.emailId,
+      employeeName: coordinator.employeeName
+    }));
   }
 
   async findAllMechanics(): Promise<IFindAllCoordinatorAndMechanic[]> {
@@ -344,7 +350,7 @@ export default class EmployeeRepoImpl extends BaseRepository<any> implements Emp
   }
 
 
-  async findByEmployeeId(id: string): Promise<IGetEmployeeProfileUsecase | null> {
+  async findByEmployeeId(id: string): Promise<IGetEmployeeProfileUsecaseDto | null> {
     try {
       if (!id.match(/^[0-9a-fA-F]{24}$/)) {
         return null;

@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import IEmployeeRepository from '../../../infrastructure/repositories/employee-repository';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../types';
 import { ILoginEmployeeResult } from '../../../domain/dtos/Employee-usecase/login-employee-usecase-interface';
 import ILoginEmployeeUseCase from '../../interface/employee/login-employee-usecase-interface';
+import IEmployeeRepository from '../../../domain/Repository/i-employee-repository';
 
 
 @injectable()

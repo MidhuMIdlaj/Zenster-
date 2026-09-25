@@ -1,5 +1,4 @@
 import { inject, injectable } from "inversify";
-import { Admin } from "../../../domain/entities/Admin";
 import { IAdminRepository } from "../../../domain/Repository/i-admin-repository";
 import { TYPES } from "../../../types";
 import { IUpdateProfileUsecase } from "../../../domain/dtos/Admin-usecase/update-admin-profile-usecase-interface";

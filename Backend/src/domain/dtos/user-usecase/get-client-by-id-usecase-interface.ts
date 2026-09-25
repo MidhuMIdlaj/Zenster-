@@ -1,6 +1,6 @@
 import { Product } from "../../entities/User";
 
-export interface IGetClientByIdUsecase {
+export interface IGetClientByIdUsecaseDto {
   id: string;
   email: string;
   clientName: string;

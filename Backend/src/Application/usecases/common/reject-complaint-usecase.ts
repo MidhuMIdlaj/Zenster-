@@ -1,11 +1,9 @@
-import mongoose from "mongoose";
 import { IAdminRepository } from "../../../domain/Repository/i-admin-repository";
 import IComplaintRepository from "../../../domain/Repository/i-complaint-repository";
 import IEmployeeRepository from "../../../domain/Repository/i-employee-repository";
 import { ComplaintReassignmentScheduler } from "../../../infrastructure/Services/scheduler-service";
 import { inject, injectable } from "inversify";
 import { TYPES } from "../../../types";
-import GetComplaintByIdUseCase from "./get-complaint-by-id-usecase";
 import { IEmailService } from "../../../domain/Repository/i-email-repository";
 import { IRejectComplaintUseCase } from "../../interface/common/reject-complaint-usecase-interface";
 
@@ -17,15 +15,14 @@ export class RejectComplaintUseCase  implements IRejectComplaintUseCase{
     @inject(TYPES.IAdminRepository) private adminRepo : IAdminRepository,
     @inject(TYPES.IEmailService) private emailServices : IEmailService,
     @inject(TYPES.ComplaintReassignmentScheduler) private complaintReassign: ComplaintReassignmentScheduler,
-    @inject(TYPES.getComplaintByIdUsecase) private getComplaintByIdUsecase : GetComplaintByIdUseCase,
   ) {}
 
   async execute(complaintId: string, mechanicId: string, reason: string) {
-    const complaint = await this.getComplaintByIdUsecase.execute(complaintId);
+    const complaint = await this.complaintRepo.getComplaintById(complaintId);
     if (!complaint) throw new Error("Complaint not found");
 
     const assignment = complaint.assignedMechanicId.find(
-  (m: { mechanicId: mongoose.Types.ObjectId }) => m.mechanicId.toString() === mechanicId
+  (m: { mechanicId: string }) => m.mechanicId.toString() === mechanicId
 );
 
 

@@ -4,13 +4,12 @@ import Complaint from '../../domain/entities/Complaint';
 import { ServerError } from '../../domain/error/complaintError';
 import EmployeeModel from '../db/models/employee.model'
 import mongoose from 'mongoose';
-import { IAcceptComplaintUsecase } from '../../domain/dtos/complaint-usecase/accept-complaint-usecase-interface';
-import { IChangeStatusUsecase } from '../../domain/dtos/complaint-usecase/change-status-usecase-interface';
-import { ICompleteTaskUsecase } from '../../domain/dtos/complaint-usecase/complete-task-usecase-interface';
-import { IDeleteComplaintUsecase } from '../../domain/dtos/complaint-usecase/complaint-delete-usecase-interface';
+import { IAcceptComplaintUsecaseDto } from '../../domain/dtos/complaint-usecase/accept-complaint-usecase-interface';
+import { IChangeStatusUsecaseDto } from '../../domain/dtos/complaint-usecase/change-status-usecase-interface';
+import { ICompleteTaskUsecaseDto } from '../../domain/dtos/complaint-usecase/complete-task-usecase-interface';
+import { IDeleteComplaintUsecaseDto } from '../../domain/dtos/complaint-usecase/complaint-delete-usecase-interface';
 import { IComplaintRepoReturn } from '../../domain/dtos/complaint-usecase/create-complaint-usecase-interface';
 import { IGetComplaintMechanicUsecase } from '../../domain/dtos/complaint-usecase/get-mechanic-complaint-usecase-interface';
-import { IComplaint } from '../../domain/complaint/type';
 import { BaseRepository } from './base-repository';
 
 type UnknownRecord = Record<string, unknown>;
@@ -99,41 +98,53 @@ export default class ComplaintRepoImpl extends BaseRepository<ComplaintDocument>
     );
   }
 
-  async reassignComplaint(complaintId: string, newMechanicId: string, assignedBy: string): Promise<ComplaintDocument | null> {
-    const newAssignment = {
-      mechanicId: newMechanicId,
-      assignedAt: new Date(),
-      status: "pending",
-      assignedBy
-    };
+ async reassignComplaint(
+  complaintId: string,
+  newMechanicId: string,
+  assignedBy: string
+): Promise<IComplaintRepoReturn | null> {
 
-    // Update mechanic's lastAssignedAt timestamp
-    await EmployeeModel.findByIdAndUpdate(
-      newMechanicId,
-      { lastAssignedAt: new Date() },
-      { new: true }
-    ).catch(err => console.error('Error updating lastAssignedAt:', err));
+  const newAssignment = {
+    mechanicId: newMechanicId,
+    assignedAt: new Date(),
+    status: "pending",
+    assignedBy
+  };
 
-    return ComplaintModel.findByIdAndUpdate(
-      complaintId,
-      {
-        $push: { assignedMechanics: newAssignment },
-        $set: {
-          workingStatus: "pending",
-          "status.status": "pending",
-          "status.updatedAt": new Date(),
-          "status.updatedBy": assignedBy
-        }
+  await EmployeeModel.findByIdAndUpdate(
+    newMechanicId,
+    { lastAssignedAt: new Date() },
+    { new: true }
+  );
+
+  const complaint = await ComplaintModel.findByIdAndUpdate(
+    complaintId,
+    {
+      $push: {
+        assignedMechanics: newAssignment
       },
-      { new: true }
-    );
+      $set: {
+        workingStatus: "pending",
+        "status.status": "pending",
+        "status.updatedAt": new Date(),
+        "status.updatedBy": assignedBy
+      }
+    },
+    { new: true }
+  );
+
+  if (!complaint) {
+    return null;
   }
+
+  return this.mapToComplaint(complaint);
+}
 
   async updateStatusByMechanic(
     complaintId: string,
     status: string,
     mechanicId: string
-  ): Promise<IChangeStatusUsecase> {
+  ): Promise<IChangeStatusUsecaseDto> {
     if (!mongoose.Types.ObjectId.isValid(complaintId)) {
       throw new Error("Invalid complaint ID format");
     }
@@ -156,7 +167,7 @@ export default class ComplaintRepoImpl extends BaseRepository<ComplaintDocument>
   }
 
 
-  async deleteComplaint(id: string): Promise<IDeleteComplaintUsecase> {
+  async deleteComplaint(id: string): Promise<IDeleteComplaintUsecaseDto> {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid complaint ID format");
     }
@@ -257,7 +268,7 @@ export default class ComplaintRepoImpl extends BaseRepository<ComplaintDocument>
     }
   }
 
-  async acceptComplaint(complaintId: string, mechanicId: string): Promise<IAcceptComplaintUsecase> {
+  async acceptComplaint(complaintId: string, mechanicId: string): Promise<IAcceptComplaintUsecaseDto> {
     try {
       const result = await ComplaintModel.updateOne(
         { _id: complaintId },
@@ -342,7 +353,7 @@ export default class ComplaintRepoImpl extends BaseRepository<ComplaintDocument>
     paymentStatus?: string,
     amount?: number,
     paymentMethod?: string,
-  ): Promise<ICompleteTaskUsecase | null> {
+  ): Promise<ICompleteTaskUsecaseDto | null> {
     try {
       if (!mongoose.Types.ObjectId.isValid(taskId)) {
         console.error(`Invalid taskId: ${taskId}`);

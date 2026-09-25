@@ -6,17 +6,16 @@ import Employee from "../db/models/employee.model";
 import EmployeeModel from "../db/models/employee.model";
 import { inject, injectable, unmanaged } from "inversify";
 import { TYPES } from "../../types";
-import GetComplaintByIdUseCase from "../../Application/usecases/common/get-complaint-by-id-usecase";
-import {FindBestMechanicUseCase}  from "../../Application/usecases/employee/find-best-mechanic-usecase"
 import IGetComplaintByIdUseCase from "../../Application/interface/common/get-complaint-by-id-usecase-interface";
 import { IFindBestMechanicUseCase } from "../../Application/interface/employee/find-best-mechanic-usecase-interface";
+import { IComplaintReassignmentScheduler } from "../../domain/Repository/i-shedule-available-mechanic-repository";
 
 interface ExtendedAgenda extends Agenda {
   unlockJobs?(): Promise<void>;
 }
 
 @injectable()
-export class ComplaintReassignmentScheduler {
+export class ComplaintReassignmentScheduler  implements IComplaintReassignmentScheduler {
   private agenda: ExtendedAgenda;
   private isReady = false;
   private isStarting = false;

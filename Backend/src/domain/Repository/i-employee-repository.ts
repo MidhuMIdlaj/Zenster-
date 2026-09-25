@@ -1,10 +1,8 @@
-import { promises } from "dns";
 import Employee from "../entities/Employee";
-import { Types } from "mongoose";
 import { IGetAllEmployeesUseCase } from "../dtos/Employee-usecase/get-all-employee-usecase-interface";
 import { IEditEmployeeUsecase } from "../dtos/Employee-usecase/edit-employee-usecase-interface";
 import {  IFindAllCoordinatorAndMechanic } from "../dtos/Employee-usecase/find-all-coordinator-usecase";
-import { IGetEmployeeProfileUsecase } from "../dtos/Employee-usecase/get-employee-profile-usecase-interface";
+import { IGetEmployeeProfileUsecaseDto } from "../dtos/Employee-usecase/get-employee-profile-usecase-interface";
 import { IGetAvailableMechanicUsecase } from "../dtos/complaint-usecase/get-available-mechanic-usecase-interface";
 import { ISafeEmployee } from "../dtos/Employee-usecase/safe-employee-interface";
 export default interface IEmployeeRepository  {
@@ -42,8 +40,8 @@ export default interface IEmployeeRepository  {
   updatePassword(email: string, hashedPassword: string): Promise<void>;
   findAllMechanics(): Promise<IFindAllCoordinatorAndMechanic[]>;
   findAllCoordinators(): Promise<IFindAllCoordinatorAndMechanic[]>;
-  findByEmployeeId(id : string): Promise<IGetEmployeeProfileUsecase | null >
-  findCoordinators(): Promise<{ _id: Types.ObjectId; emailId: string; employeeName?: string }[]>;
+  findByEmployeeId(id : string): Promise<IGetEmployeeProfileUsecaseDto | null >
+  findCoordinators(): Promise<{ _id: string; emailId: string; employeeName?: string }[]>;
   updateWorkingStatus(id: string, status: 'Available' | 'Occupied'): Promise<void>;
   findBestMechanic(productName: string, priority: 'high' | 'medium' | 'low'): Promise<ISafeEmployee | null>;
    findBestMechanicExcluding(

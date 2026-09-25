@@ -1,4 +1,4 @@
-import { Product } from "../../entities/User";
+import Client, { Product } from "../../entities/User";
 
 export interface IEditClientUsecase{
   id: string;
@@ -11,3 +11,9 @@ export interface IEditClientUsecase{
   status: string;
   isDeleted: boolean;
 }
+
+export interface EditClientDTO {
+  clientId: string;
+  updateData: Partial<Client>;
+}
+

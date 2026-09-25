@@ -5,13 +5,9 @@ import { inject, injectable } from "inversify";
 import { TYPES } from "../../../types";
 import { ResponseDTO } from "../../../domain/dtos/Response";
 import { ILoginAdminUseCase } from "../../interface/admin/admin/admin-auth-usecase-interface";
+import { AdminLoginResponse } from "../../../domain/dtos/Admin-usecase/admin-login-response-usecase-interface";
 
-export interface AdminLoginResponse {
-  accessToken: string;
-  email: string;
-  id: string;
-  role: string;
-}
+
 
 @injectable()
 export default class LoginAdminUseCase implements ILoginAdminUseCase{

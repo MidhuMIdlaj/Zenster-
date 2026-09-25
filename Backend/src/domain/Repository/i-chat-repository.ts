@@ -1,5 +1,5 @@
 import { IGetConversationUsecase } from "../dtos/Chat-usecase/get-conversation-usecase";
-import { IMarkMessagesAsReadUsecase } from "../dtos/Chat-usecase/mark-message-as-read-usecase-interface";
+import { IMarkMessagesAsReadUsecaseDto } from "../dtos/Chat-usecase/mark-message-as-read-usecase-interface";
 import { ISavedMessageUsecase } from "../dtos/Chat-usecase/save-message-usecase-interface";
 
 export interface IAttachment {
@@ -37,5 +37,5 @@ export interface IChatRepository {
     senderRole?: string;
     receiverRole?: string;
   }): Promise<ISavedMessageUsecase>;
-  markMessagesAsRead(conversationId: string, userId: string): Promise<IMarkMessagesAsReadUsecase>;
+  markMessagesAsRead(conversationId: string, userId: string): Promise<IMarkMessagesAsReadUsecaseDto>;
 }

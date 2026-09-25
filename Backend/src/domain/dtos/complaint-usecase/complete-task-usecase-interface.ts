@@ -1,6 +1,6 @@
 import { CompletionDetails, MechanicAssignment } from "../../entities/Complaint";
 
-export interface ICompleteTaskUsecase {
+export interface ICompleteTaskUsecaseDto {
   id: string;
   complaintNumber: number;
   customerEmail: string;

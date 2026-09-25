@@ -23,9 +23,6 @@ import LocationRouter from './interfaces/Routers/common/location-router';
 import ChatMessage from './infrastructure/db/models/chat.model';
 import jwt from 'jsonwebtoken';
 import path from 'path';
-import { NotificationRepository } from './infrastructure/Services/notification-service';
-import EmployeeModel from './infrastructure/db/models/employee.model';
-import { AdminModel } from './infrastructure/db/models/Admin/admin.model';
 import { config } from './config';
 
 const app = express();
@@ -35,7 +32,7 @@ export let ioInstance: Server | undefined;
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Configure CORS to handle multiple origins
+
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     const allowedOrigins = config.clientUrl.split(',').map(url => url.trim());

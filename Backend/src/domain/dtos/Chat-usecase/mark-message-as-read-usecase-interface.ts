@@ -1,3 +1,3 @@
-export interface IMarkMessagesAsReadUsecase{
+export interface IMarkMessagesAsReadUsecaseDto{
   markedCount: number;
 }

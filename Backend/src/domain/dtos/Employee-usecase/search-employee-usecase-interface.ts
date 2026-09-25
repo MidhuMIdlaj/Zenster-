@@ -1,3 +1,5 @@
+import Employee from "../../entities/Employee";
+
 export interface ISearchEmployeeResponse {
   id: string;
   date: string;
@@ -22,3 +24,16 @@ export interface ISearchEmployeesResult {
   employees: ISearchEmployeeResponse[];
   total: number;
 }
+
+export interface SearchParams {
+  searchTerm: string;
+  status: string;
+  position: string;
+  page: number;
+  limit: number;
+}
+
+export interface SearchResult {
+  employees: Employee[];
+  total: number;
+}  

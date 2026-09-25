@@ -78,7 +78,7 @@ export class NotificationRepository implements INotificationRepository {
   callLink: string,
   initiatorName: string,
   recipientType : string,
-) {
+): Promise<INotification[]> {
   try {
     const notifications = await Promise.all(
       recipientIds.map(async (recipientId) => {
@@ -136,7 +136,7 @@ export class NotificationRepository implements INotificationRepository {
       })
     );
 
-    return notifications;
+    return notifications as unknown as INotification[];
   } catch (error) {
     console.error('Error creating video call notifications:', error);
     throw error;
@@ -166,7 +166,10 @@ export class NotificationRepository implements INotificationRepository {
     }
   }
 
-   async markChatNotificationAsRead(notificationId: string, conversationId: string) {
+   async markChatNotificationAsRead(
+    notificationId: string,
+    conversationId: string
+  ): ReturnType<INotificationRepository['markChatNotificationAsRead']> {
     try {
        if (!notificationId || !mongoose.Types.ObjectId.isValid(notificationId)) {
       return { success: false, error: 'Invalid notification ID' };
@@ -206,7 +209,7 @@ export class NotificationRepository implements INotificationRepository {
 
       return { 
         success: true, 
-        notification,
+        notification: notification.toObject() as unknown as INotification,
         markedCount: result?.modifiedCount || 0
       };
     } catch (error) {
@@ -240,7 +243,10 @@ export class NotificationRepository implements INotificationRepository {
         read: true
       });
     }
-      return { success: true, updatedNotification };
+      return {
+        success: true,
+        updatedNotification: updatedNotification.toObject() as unknown as INotification,
+      };
     } catch (error) {
       console.error('❌ Error marking notification as read:', error);
       return {
@@ -265,7 +271,7 @@ export class NotificationRepository implements INotificationRepository {
     conversationId: string,
     recipientRole: string,
     senderRole: string
-  ) {
+  ): Promise<INotification> {
  
     try {
       const normalizedMessageText = messageText || '';
@@ -311,7 +317,7 @@ export class NotificationRepository implements INotificationRepository {
         ioInstance.to(`user_${recipientId}`).emit('new_chat_notification', notificationData);
       }
 
-      return savedNotification;
+      return savedNotification.toObject() as unknown as INotification;
     } catch (error) {
       console.error('Error creating chat notification:', error);
       throw error;
@@ -327,7 +333,12 @@ export class NotificationRepository implements INotificationRepository {
       type: 'chat_message',
       read: false
     }).sort({ createdAt: -1 });
-    return { success: true, notifications };
+    return {
+      success: true,
+      notifications: notifications.map(
+        notification => notification.toObject() as unknown as INotification
+      )
+    };
   } catch (error) {
     console.error('Error fetching unread chat notifications:', error);
     return { 

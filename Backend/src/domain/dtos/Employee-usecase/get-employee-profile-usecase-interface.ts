@@ -1,4 +1,4 @@
-export interface IGetEmployeeProfileUsecase{
+export interface IGetEmployeeProfileUsecaseDto{
   id: string;
   employeeName: string;
   emailId: string;

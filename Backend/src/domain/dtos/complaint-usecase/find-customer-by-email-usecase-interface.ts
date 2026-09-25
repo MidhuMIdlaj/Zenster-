@@ -1,6 +1,6 @@
-import { CustomerResponseDTO } from "../../../Application/usecases/common/find-customer-by-emial-usecase";
+import { CustomerResponseDTO } from "../user-usecase/customer-response-usecase-interface";
 
-export interface IFindCustomerByEmailUsecase {
+export interface IFindCustomerByEmailUsecaseDto {
   exists: boolean;
   data: CustomerResponseDTO | null;
 }
