@@ -1,5 +1,5 @@
 import { IGetConversationUsecase } from '../../domain/dtos/Chat-usecase/get-conversation-usecase';
-import { IMarkMessagesAsReadUsecase } from '../../domain/dtos/Chat-usecase/mark-message-as-read-usecase-interface';
+import { IMarkMessagesAsReadUsecaseDto } from '../../domain/dtos/Chat-usecase/mark-message-as-read-usecase-interface';
 import { ISavedMessageUsecase } from '../../domain/dtos/Chat-usecase/save-message-usecase-interface';
 import { IChatRepository, IChatMessage, IAttachment } from '../../domain/Repository/i-chat-repository';
 import ClientModel from '../db/models/Admin/client.model';
@@ -107,7 +107,7 @@ export class ChatRepositoryImplement implements IChatRepository {
     };
   }
 
-  async markMessagesAsRead(conversationId: string, userId: string): Promise<IMarkMessagesAsReadUsecase> {
+  async markMessagesAsRead(conversationId: string, userId: string): Promise<IMarkMessagesAsReadUsecaseDto> {
     const result = await ChatMessage.updateMany(
       {
         conversationId,

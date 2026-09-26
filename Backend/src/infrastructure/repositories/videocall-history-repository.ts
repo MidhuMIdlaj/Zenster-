@@ -1,16 +1,17 @@
+import { IVideoCallHistory, VideoCallHistoryInput, VideoCallParticipant } from '../../domain/dtos/videocall/video-call-history-usecase-interface';
 import { IVideoCallHistoryRepository } from '../../domain/Repository/i-videocall-history-repository';
-import VideoCallHistoryModel, { IVideoCallHistory, VideoCallHistoryInput, VideoCallParticipant } from '../db/models/videocall.history.model';
+import videocallHistoryModel from '../db/models/videocall.history.model';
 
 export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
 
   async create(callRecord: VideoCallHistoryInput): Promise<IVideoCallHistory> {
     try {
-      const existingRecord = await VideoCallHistoryModel.findOne({ roomId: callRecord.roomId });
+      const existingRecord = await videocallHistoryModel.findOne({ roomId: callRecord.roomId });
       if (existingRecord) {
         throw new Error('A call with this room ID already exists');
       }
 
-      const newRecord = new VideoCallHistoryModel(callRecord);
+      const newRecord = new videocallHistoryModel(callRecord);
       const savedRecord = await newRecord.save();
       return savedRecord;
     } catch (error: unknown) {
@@ -27,7 +28,7 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
   }
 
   async updateParticipants(roomId: string, participants: VideoCallParticipant[]): Promise<IVideoCallHistory> {
-    const updated = await VideoCallHistoryModel.findOneAndUpdate(
+    const updated = await videocallHistoryModel.findOneAndUpdate(
       { roomId },
       { $set: { participants } },
       { new: true }
@@ -42,9 +43,9 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
 
   async update(roomId: string, callRecord: IVideoCallHistory): Promise<IVideoCallHistory> {
     try {
-      const updatedRecord = await VideoCallHistoryModel.findOneAndUpdate(
+      const updatedRecord = await videocallHistoryModel.findOneAndUpdate(
         { roomId },
-        { ...callRecord, _id: callRecord.id },
+        { ...callRecord },
         { new: true }
       );
       if (!updatedRecord) {
@@ -64,7 +65,7 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
   }
 
   async endCall(roomId: string): Promise<IVideoCallHistory> {
-    const call = await VideoCallHistoryModel.findOne({ roomId });
+    const call = await videocallHistoryModel.findOne({ roomId });
     if (!call) throw new Error('Call not found');
     if (call.status === 'ended') return call;
 
@@ -80,7 +81,7 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
 
   async findByRoomId(roomId: string): Promise<IVideoCallHistory | null> {
     try {
-      const record = await VideoCallHistoryModel.findOne({ roomId });
+      const record = await videocallHistoryModel.findOne({ roomId });
       return record;
     } catch (error: unknown) {
       const e = error as Error;
@@ -95,7 +96,7 @@ export class VideoCallHistoryRepoImpl implements IVideoCallHistoryRepository {
 
   async findAll(): Promise<IVideoCallHistory[]> {
     try {
-      const records = await VideoCallHistoryModel.find().sort({ createdAt: -1 });
+      const records = await videocallHistoryModel.find().sort({ createdAt: -1 });
       return records;
     } catch (error: unknown) {
       const e = error as Error;

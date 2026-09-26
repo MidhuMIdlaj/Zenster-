@@ -3,7 +3,6 @@ import { Request, Response, NextFunction } from 'express';
 import { StatusCode } from '../../../shared/enums/statusCode';
 import { sendSuccess } from '../../../shared/response';
 import {  ValidationError } from '../../../domain/error/employeeErrors';
-import { VideoCallHistoryInput } from '../../../infrastructure/db/models/videocall.history.model';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../types';
 import { IFindAdminNameUseCase } from '../../../Application/interface/admin/admin/find-all-admin-name-usecase-interface';
@@ -11,6 +10,7 @@ import { ICreateVideoCallRecordUseCase } from '../../../Application/interface/vi
 import { IEndVideoCallUseCase } from '../../../Application/interface/videocall/end-videocall-usecase-interface';
 import { IGetCallHistoryUseCase } from '../../../Application/interface/videocall/get-call-history-usecase-interface';
 import { IUpdateCallParticipantsUseCase } from '../../../Application/interface/videocall/update-call-participens-usecase-inerface';
+import { VideoCallHistoryInput } from '../../../domain/dtos/videocall/video-call-history-usecase-interface';
 
 @injectable()
 export class VideoCallHistoryController {
@@ -44,7 +44,10 @@ export class VideoCallHistoryController {
       status: 'ongoing'
     };
 
-    const createdRecord = await this.createCallRecordUseCase.execute(callRecord);
+    const executeCreateCallRecord = this.createCallRecordUseCase.execute as unknown as (
+      input: VideoCallHistoryInput
+    ) => ReturnType<ICreateVideoCallRecordUseCase['execute']>;
+    const createdRecord = await executeCreateCallRecord.call(this.createCallRecordUseCase, callRecord);
 
     sendSuccess(res, createdRecord, 'Video call record created successfully', StatusCode.CREATED);
         } catch (error) {
@@ -93,10 +96,18 @@ export class VideoCallHistoryController {
       throw new ValidationError('Room ID is required');
     }
 
-    const call = await this.endCallUseCase.execute(roomId);
-    if (!call) {
+    const result = await this.endCallUseCase.execute(roomId);
+    if (!result) {
       throw new ValidationError('Call not found');
     }
+
+    const call = result as unknown as {
+      status: string;
+      startedAt?: Date;
+      endedAt?: Date;
+      duration?: number;
+      save: () => Promise<unknown>;
+    };
 
     if (call.status === 'ended') {
        sendSuccess(res, call, 'Call already ended', StatusCode.OK);
